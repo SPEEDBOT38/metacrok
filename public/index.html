@@ -1,249 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F58545">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>metacrok — eats ads, spits out better ones</title>
-<meta name="description" content="Name your rivals. Metacrok reads their live Meta ads and your Instagram, maps where they crowd, and writes three ads for the open space. Built for solo D2C founders.">
-<link rel="icon" href="/img/gator-peek.webp">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Funnel+Sans:wght@300..800&family=Spline+Sans+Mono:wght@400..600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/theme.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&amp;family=Funnel+Sans:wght@400;500;600;700&amp;family=Press+Start+2P&amp;display=swap" rel="stylesheet">
 <style>
-.nav{position:fixed;inset:0 0 auto;z-index:50;display:flex;justify-content:space-between;align-items:center;height:60px;padding:0 16px;transition:background .3s,color .3s}
-.nav.solid{background:rgba(14,13,12,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:var(--paper)}
-.nav a.go{display:inline-flex;align-items:center;min-height:40px;padding:0 18px;border-radius:99px;background:var(--night);color:var(--paper);font:600 14px var(--sans);text-decoration:none}
-.nav.solid a.go{background:var(--paper);color:var(--night)}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 28px;white-space:nowrap;border-radius:99px;font:600 16px var(--sans);text-decoration:none;transition:transform .2s var(--ease)}
-.btn:hover{transform:translateY(-2px)}
-.btn.ink{background:var(--night);color:var(--paper)}
-.btn.line{box-shadow:inset 0 0 0 1.5px currentColor;color:inherit}
-.field{--g:16px;padding:96px max(var(--g),calc((100% - 1240px) / 2)) 80px}
-.huge{font:800 clamp(64px,17vw,236px)/.8 var(--display);font-variation-settings:"opsz" 96,"wdth" 75;letter-spacing:-.04em}
-.big{font:800 clamp(40px,8.4vw,112px)/.9 var(--display);font-variation-settings:"opsz" 96,"wdth" 80;letter-spacing:-.035em;text-wrap:balance}
-.lede{font-size:clamp(18px,1.9vw,22px);line-height:1.5;max-width:56ch}
-.caption{font:500 14px var(--sans);opacity:.75;margin-top:28px}
-.lab{font:600 14px var(--sans);opacity:.85;margin-bottom:10px}
-.open-word{background:var(--open);color:var(--night);padding:0 .12em;border-radius:.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
-
-/* hero */
-.hero{background:var(--tangerine);color:var(--night);min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;padding-top:100px;position:relative;overflow:hidden}
-.hero .huge{position:relative;z-index:1}
-.hero .huge span{display:block}
-.hero-row{display:flex;flex-direction:column;gap:28px;margin-top:32px}
-.hero .ctas{display:flex;gap:12px;flex-wrap:wrap}
-.hero-gator{position:relative;align-self:flex-end;width:min(46vw,210px);margin:0 -8px -26px 0;transform:rotate(-5deg)}
-
-/* the story preview: stacked fields */
-.ch-loud{background:var(--magenta);color:var(--paper)}
-.ch-map{background:var(--violet);color:var(--paper)}
-.ch-aud{background:var(--mint);color:var(--night)}
-.ch-you{background:var(--cobalt);color:var(--paper)}
-.ch-ads{background:var(--night);color:var(--paper)}
-.two{display:grid;gap:32px;margin-top:36px;align-items:start}
-.matrix{width:100%;border-collapse:collapse;font-size:14px}
-.matrix th{text-align:left;font-weight:500;padding:8px 6px;opacity:.8}
-.matrix th.c{text-align:center}
-.matrix td{text-align:center;padding:8px 4px;border-top:1px solid rgba(255,248,239,.2)}
-.matrix tbody th{font:700 18px var(--display);opacity:1}
-.matrix i{display:inline-block;border-radius:50%;background:var(--paper);vertical-align:middle}
-.matrix i.you{background:var(--night)}
-.matrix tr.only th span{background:var(--open);color:var(--night);padding:0 .15em;border-radius:3px}
-.mapbox{background:var(--paper);border-radius:18px;padding:8px;max-width:620px}
-.mapbox svg{width:100%;display:block}
-.aud-row{padding:18px 20px;border-radius:16px;border:1.5px dashed rgba(14,13,12,.45);margin-bottom:12px}
-.aud-row.t{background:var(--night);color:var(--paper);border-color:var(--night)}
-.aud-row h3{font:800 clamp(24px,3vw,36px)/1 var(--display);font-variation-settings:"opsz" 72,"wdth" 85;letter-spacing:-.02em}
-.aud-row p{font-size:16px;margin-top:6px;opacity:.85}
-.chip{display:inline-block;font:600 12px var(--sans);padding:4px 10px;border-radius:99px;border:1.5px solid currentColor;margin-left:6px;vertical-align:middle;letter-spacing:0}
-.chip.o{background:var(--open);border-color:var(--open);color:var(--night)}
-.vbar{display:grid;grid-template-columns:110px 1fr 40px;gap:10px;align-items:center;font-size:14px;margin-bottom:8px}
-.vbar b{display:block;height:12px;border-radius:99px;background:var(--paper)}
-.vbar b.t{background:var(--tangerine)}
-.cards{display:grid;gap:16px;margin-top:36px}
-.card{background:var(--night2);border:1px solid var(--line);border-radius:20px;padding:18px}
-.card h3{font:800 34px/.9 var(--display);font-variation-settings:"opsz" 72,"wdth" 82;letter-spacing:-.025em;margin-bottom:14px}
-.card .cr{aspect-ratio:4/3;border-radius:12px;display:flex;align-items:flex-end;padding:16px;font:800 26px/.95 var(--display);font-variation-settings:"opsz" 72,"wdth" 85;margin-bottom:12px}
-.card p{font-size:14px;color:var(--soft)}
-mark{background:var(--mint);color:var(--night);border-radius:3px;padding:0 2px}
-
-/* how it works: the sentence */
-.how{background:var(--night);color:var(--paper)}
-.madlib{font:500 clamp(28px,5.6vw,64px)/1.35 var(--display);font-variation-settings:"opsz" 60,"wdth" 92;letter-spacing:-.02em;max-width:22ch;margin-top:28px}
-.madlib u{text-decoration:none;color:var(--tangerine);border-bottom:2px solid var(--line2)}
-.steps{display:grid;gap:22px;margin-top:56px;counter-reset:s}
-.steps li{list-style:none;border-top:1px solid var(--line2);padding-top:16px}
-.steps h3{font:700 22px var(--display);margin-bottom:6px}
-.steps p{color:var(--soft);font-size:16px;max-width:44ch}
-.steps .num{color:var(--dim);font-size:14px;display:block;margin-top:10px}
-
-/* honesty */
-.honest{background:var(--night2);color:var(--paper)}
-.honest ul{list-style:none;display:grid;gap:0;margin-top:36px}
-.honest li{display:grid;gap:6px;padding:22px 0;border-top:1.5px solid var(--line2)}
-.honest li b{font:800 clamp(24px,3.4vw,40px)/1 var(--display);font-variation-settings:"opsz" 72,"wdth" 85;letter-spacing:-.02em}
-.honest li span{font-size:16px;max-width:60ch;color:var(--soft)}
-
-/* close */
-.close{background:var(--tangerine);color:var(--night);text-align:left}
-.close .ctas{margin-top:34px}
-footer{padding:28px 16px 40px;color:var(--dim);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1272px;margin:0 auto}
-
-@media (min-width:700px){
-  .nav{padding:0 4vw}
-  .field{--g:4vw;padding-top:128px;padding-bottom:120px}
-  .hero{padding-top:120px}
-  .hero-row{flex-direction:row;justify-content:space-between;align-items:flex-end}
-  .hero-gator{position:absolute;top:150px;right:3vw;width:min(29vw,300px);margin:0}
-  .two{grid-template-columns:1.1fr 1fr;gap:5vw}
-  .cards{grid-template-columns:repeat(3,1fr)}
-  .steps{grid-template-columns:repeat(3,1fr)}
-  .honest li{grid-template-columns:minmax(260px,1fr) 1.4fr;gap:5vw;align-items:baseline}
-}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:#0B192C;color:#F5F8FC;font:400 16px/1.5 'Funnel Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-underline-offset:.18em}
+a:hover{color:#FFD23A}
+img{display:block;max-width:100%}
+::selection{background:#F7862A;color:#0B192C}
 </style>
 </head>
 <body>
-<!--
-THESIS: The landing page is a preview of the story the product writes: a tangerine opening, then the niche told chapter by chapter in drenched colour fields with sample data, refusing the SaaS hero-features-pricing template.
-OWN-WORLD: Same world as the app: night ground, tangerine/magenta/violet/mint/cobalt fields, yellow only for open space, Bricolage Grotesque condensed display, Funnel Sans text, Spline Sans Mono for numbers.
-STORY: A solo founder sees what they'd get (where rivals crowd, who nobody talks to, how their Instagram differs, three ads), trusts it because it says what it won't claim, and fills in one sentence.
-FIRST VIEWPORT: A tangerine field with "Eats ads. Spits out better ones." at near full width, the one-line offer and the Feed the gator button bottom-left, the gator top-right.
-FORM: Year-in-review colour story; the user chose it as IMPECCABLE'S PICK (my rank 1 of 7) over the roll's assigned The Spec Label (rank 3) in the direction round recorded in .impeccable/decision/direction.json; seed key 14a7b7ad.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
--->
-<nav class="nav" id="nav"><a class="wordmark" href="/">metacrok</a><a class="go" href="/app">Feed the gator</a></nav>
-
-<header class="field hero">
-  <img class="gator hero-gator" src="/img/gator-hero.webp" alt="" width="377" height="400">
-  <h1 class="huge"><span class="fill">Eats ads.</span><span class="fill">Spits out better ones.</span></h1>
-  <div class="hero-row">
-    <p class="lede">Name your rivals. Metacrok reads their live Meta ads and your Instagram, maps where they all crowd, and writes three ads for the space nobody owns. For solo D2C founders, in about 90 seconds.</p>
-    <div class="ctas"><a class="btn ink" href="/app">Feed the gator</a><a class="btn line" href="#story">See what you get</a></div>
+<header data-screen-label="01 Hero" style="position:relative;min-height:100svh;overflow:hidden;background:#1150AB;display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;z-index:0">
+    <croc-game base="assets/game/" autopilot="on" style="position:absolute;inset:0;display:block"></croc-game>
   </div>
+
+  <nav style="position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px max(20px,4vw,calc((100% - 1240px) / 2));pointer-events:none">
+    <a href="#" style="pointer-events:auto;display:block"><img src="assets/logo-white.png" alt="metacrok" style="height:30px;width:auto"></a>
+    <div style="display:flex;align-items:center;gap:28px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end">
+      <a href="#story" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">What you get</a>
+      <a href="#how" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">How it works</a>
+      <a href="https://github.com/SPEEDBOT38/metacrok/blob/main/docs/MCP.md" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">Docs</a>
+      <a href="/app" style="display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 15px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 4px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 6px 0 #0B192C;color:#0B192C">Feed the croc</a>
+    </div>
+  </nav>
+
+  
+    <div style="position:relative;z-index:2;display:flex;gap:10px;padding:0 max(20px,4vw,calc((100% - 1240px) / 2));justify-content:flex-end;pointer-events:none">
+      <div style="background:rgba(11,25,44,.88);border:2px solid #37B7C3;border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:5px">
+        <span style="font:8px 'Press Start 2P',monospace;color:#7CD2FF;letter-spacing:1px">ADS CHOMPED</span>
+        <span style="font:15px 'Press Start 2P',monospace;color:#FFDE59" id="hud-ads">0000</span>
+      </div>
+      <div style="background:rgba(11,25,44,.88);border:2px solid #37B7C3;border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:5px">
+        <span style="font:8px 'Press Start 2P',monospace;color:#7CD2FF;letter-spacing:1px">GEMS</span>
+        <span style="font:15px 'Press Start 2P',monospace;color:#FFDE59" id="hud-gems">00</span>
+      </div>
+    </div>
+  
+
+  <div style="position:relative;z-index:1;padding:clamp(24px,5vh,64px) max(20px,4vw,calc((100% - 1240px) / 2)) 0;pointer-events:none">
+    <h1 style="font:800 clamp(52px,9.6vw,148px)/.9 'Oxanium',sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:#F5F8FC;text-shadow:0 .05em 0 #0B192C;max-width:12ch">
+      <span style="display:block">Eats ads.</span>
+      <span style="display:block">Spits out better ones.</span>
+    </h1>
+    <p style="margin-top:28px;max-width:46ch;font:500 clamp(17px,1.6vw,20px)/1.5 'Funnel Sans',sans-serif;color:#F5F8FC;background:rgba(11,25,44,.82);padding:14px 18px;border-radius:8px">Name your rivals. Metacrok reads their live Meta ads and your Instagram, maps where they all crowd, and writes three ads for the space nobody owns. For solo D2C founders, in about 90 seconds.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;pointer-events:auto">
+      <a href="/app" style="display:inline-flex;align-items:center;min-height:54px;padding:0 28px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 5px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 7px 0 #0B192C;color:#0B192C">Feed the croc</a>
+      <a href="#story" style="display:inline-flex;align-items:center;min-height:54px;padding:0 26px;border-radius:8px;background:#0B192C;color:#F5F8FC;font:600 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:inset 0 0 0 2px #37B7C3,0 5px 0 rgba(11,25,44,.6)" style-hover="transform:translateY(-2px);color:#F5F8FC">See what you get</a>
+    </div>
+  </div>
+
+  <div style="flex:1 0 auto;min-height:440px;pointer-events:none"></div>
+  <div style="position:absolute;z-index:2;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(11,25,44,.88);border:1px solid #37B7C3;border-radius:20px;padding:8px 18px;font:9px/1.6 'Press Start 2P',monospace;color:#7CD2FF;white-space:nowrap;pointer-events:none">SPACE OR TAP TO JUMP</div>
 </header>
 
-<section class="field ch-loud" id="story">
-  <h2 class="big">“Pain point” is 47% of what they say.</h2>
-  <div class="two">
-    <p class="lede">Every rival ad, read by AI and weighted by how long it has run. Beside them: your own Instagram and the ads we write. Highlighted rows are angles only you use.</p>
-    <table class="matrix" aria-label="Sample: share of each brand's ads by angle">
-      <thead><tr><th>Angle</th><th class="c">Glowritual</th><th class="c">Dewdrift</th><th class="c">Your Instagram</th></tr></thead>
-      <tbody>
-        <tr><th>pain point</th><td><i style="width:40px;height:40px"></i></td><td><i style="width:34px;height:34px"></i></td><td><i class="you" style="width:12px;height:12px"></i></td></tr>
-        <tr><th>offer</th><td><i style="width:26px;height:26px"></i></td><td><i style="width:30px;height:30px"></i></td><td></td></tr>
-        <tr><th>aspiration</th><td><i style="width:22px;height:22px"></i></td><td><i style="width:14px;height:14px"></i></td><td><i class="you" style="width:16px;height:16px"></i></td></tr>
-        <tr class="only"><th><span>education</span></th><td></td><td></td><td><i class="you" style="width:44px;height:44px"></i></td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="caption">Sample story · fictional skincare brands</p>
-</section>
-
-<section class="field ch-map">
-  <h2 class="big">Rivals crowd the rational, value-led corner. The <span class="open-word">emotional, premium corner</span> is open.</h2>
-  <div class="two">
-    <div class="mapbox">
-      <svg viewBox="0 0 600 600" role="img" aria-label="Sample positioning map: rival ads cluster bottom-left, the top-right corner is empty and highlighted, three square markers show the new ads">
-        <rect x="300" y="46" width="254" height="254" rx="10" fill="#FFC24B" fill-opacity=".55"/>
-        <text x="314" y="72" font-family="Funnel Sans" font-weight="700" font-size="15" fill="#0E0D0C">open ground</text>
-        <line x1="46" y1="300" x2="554" y2="300" stroke="rgba(14,13,12,.35)"/><line x1="300" y1="46" x2="300" y2="554" stroke="rgba(14,13,12,.35)"/>
-        <g font-family="Funnel Sans" font-size="15" fill="rgba(14,13,12,.62)"><text x="46" y="290">Rational</text><text x="554" y="290" text-anchor="end">Emotional</text><text x="300" y="32" text-anchor="middle">Premium-led</text><text x="300" y="580" text-anchor="middle">Value-led</text></g>
-        <g stroke="#FFF8EF" stroke-width="1.5" fill-opacity=".9">
-          <circle cx="120" cy="420" r="17" fill="#F58545"/><circle cx="160" cy="380" r="11" fill="#F58545"/><circle cx="200" cy="470" r="14" fill="#F58545"/><circle cx="96" cy="360" r="8" fill="#F58545"/><circle cx="240" cy="410" r="9" fill="#F58545"/><circle cx="180" cy="520" r="7" fill="#F58545"/>
-          <circle cx="140" cy="460" r="13" fill="#DD2A7B"/><circle cx="230" cy="360" r="10" fill="#DD2A7B"/><circle cx="270" cy="500" r="15" fill="#DD2A7B"/><circle cx="110" cy="500" r="9" fill="#DD2A7B"/><circle cx="350" cy="430" r="8" fill="#DD2A7B"/><circle cx="210" cy="250" r="9" fill="#DD2A7B"/>
-          <circle cx="160" cy="210" r="7" fill="#2B47F5"/><circle cx="380" cy="470" r="11" fill="#2B47F5"/><circle cx="260" cy="330" r="8" fill="#2B47F5"/>
-        </g>
-        <g><rect x="396" y="136" width="30" height="30" rx="7" fill="#0E0D0C"/><text x="411" y="157" text-anchor="middle" font-family="Funnel Sans" font-weight="700" font-size="15" fill="#FFF8EF">1</text>
-        <rect x="466" y="214" width="30" height="30" rx="7" fill="#0E0D0C"/><text x="481" y="235" text-anchor="middle" font-family="Funnel Sans" font-weight="700" font-size="15" fill="#FFF8EF">2</text>
-        <rect x="350" y="250" width="30" height="30" rx="7" fill="#0E0D0C"/><text x="365" y="271" text-anchor="middle" font-family="Funnel Sans" font-weight="700" font-size="15" fill="#FFF8EF">3</text></g>
-      </svg>
+<section id="story" data-screen-label="02 What you get" style="background:#F7862A;color:#0B192C;padding:120px max(20px,4vw,calc((100% - 1240px) / 2)) 110px">
+  <h2 style="font:800 clamp(40px,7.4vw,104px)/.92 'Oxanium',sans-serif;letter-spacing:-.03em;text-transform:lowercase;text-wrap:balance;max-width:15ch">One finding. <span style="background:#FFD23A;padding:0 .1em;border-radius:.05em;box-decoration-break:clone;-webkit-box-decoration-break:clone">Three ads</span> to own it.</h2>
+  <p style="margin-top:24px;max-width:52ch;font:500 clamp(17px,1.7vw,20px)/1.5 'Funnel Sans',sans-serif;text-wrap:pretty">Metacrok reads every rival ad, finds the angle nobody owns, and hands you three ads aimed straight at it. Copy, paste into Ads Manager, done.</p>
+  <div style="margin-top:48px;background:#0B192C;color:#F5F8FC;border-radius:12px;padding:clamp(18px,3vw,32px);box-shadow:0 8px 0 #9A4A12;display:flex;flex-direction:column;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:14px;border-bottom:2px solid #1E3E62;padding-bottom:24px">
+      <span style="font:9px 'Press Start 2P',monospace;color:#7CD2FF">THE FINDING</span>
+      <p style="font:800 clamp(28px,3.8vw,48px)/1 'Oxanium',sans-serif;letter-spacing:-.02em;text-transform:lowercase;max-width:22ch">nobody in skincare explains <span style="background:#FFD23A;color:#0B192C;padding:0 .1em;border-radius:.05em">how the ingredients work</span>.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:6px;background:#12243C;font-size:14px"><b style="font:10px 'Press Start 2P',monospace;color:#FFDE59">30</b> rival ads read</span>
+        <span style="display:inline-flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:6px;background:#12243C;font-size:14px"><b style="font:10px 'Press Start 2P',monospace;color:#FFDE59">47%</b> shout pain points</span>
+        <span style="display:inline-flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:6px;background:#12243C;font-size:14px"><b style="font:10px 'Press Start 2P',monospace;color:#FFDE59">0</b> teach</span>
+      </div>
     </div>
-    <div>
-      <p class="lede">Every ad gets a place on the map: rational to emotional, value-led to premium. Close dots say the same thing. Far dots don’t. You see how far apart your rivals really are, and how far your new ads stand from the nearest one.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font:9px 'Press Start 2P',monospace;color:#FFDE59">AD 1 · EDUCATION</span>
+        <div style="background:#F5F8FC;color:#1C2B3A;border-radius:10px;overflow:hidden;font-family:system-ui,-apple-system,sans-serif">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px"><i style="width:26px;height:26px;border-radius:50%;background:#F7862A"></i><div style="line-height:1.15"><b style="font-size:13px">glowandco</b><span style="display:block;font-size:11px;color:#6B7785">Sponsored</span></div></div>
+          <div style="aspect-ratio:1/1;background:#7C4BC8;color:#F5F8FC;display:flex;align-items:flex-end;padding:18px;font:800 clamp(22px,2.2vw,30px)/.98 'Oxanium',sans-serif;letter-spacing:-.02em;text-transform:lowercase">Not all dark circles are the same.</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#E9EEF4"><b style="font-size:13px">Science over myths</b><span style="flex:none;font-size:12px;font-weight:600;padding:7px 10px;border-radius:6px;background:#D5DDE6">Learn more</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font:9px 'Press Start 2P',monospace;color:#FFDE59">AD 2 · PROBLEM / SOLUTION</span>
+        <div style="background:#F5F8FC;color:#1C2B3A;border-radius:10px;overflow:hidden;font-family:system-ui,-apple-system,sans-serif">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px"><i style="width:26px;height:26px;border-radius:50%;background:#F7862A"></i><div style="line-height:1.15"><b style="font-size:13px">glowandco</b><span style="display:block;font-size:11px;color:#6B7785">Sponsored</span></div></div>
+          <div style="aspect-ratio:1/1;background:#B8532A;color:#F5F8FC;display:flex;align-items:flex-end;padding:18px;font:800 clamp(22px,2.2vw,30px)/.98 'Oxanium',sans-serif;letter-spacing:-.02em;text-transform:lowercase">Stubborn pigmentation? Here’s why.</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#E9EEF4"><b style="font-size:13px">Targeted care that works</b><span style="flex:none;font-size:12px;font-weight:600;padding:7px 10px;border-radius:6px;background:#D5DDE6">Shop now</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <span style="font:9px 'Press Start 2P',monospace;color:#FFDE59">AD 3 · VALUE</span>
+        <div style="background:#F5F8FC;color:#1C2B3A;border-radius:10px;overflow:hidden;font-family:system-ui,-apple-system,sans-serif">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 12px"><i style="width:26px;height:26px;border-radius:50%;background:#F7862A"></i><div style="line-height:1.15"><b style="font-size:13px">glowandco</b><span style="display:block;font-size:11px;color:#6B7785">Sponsored</span></div></div>
+          <div style="aspect-ratio:1/1;background:#2170CA;color:#F5F8FC;display:flex;align-items:flex-end;padding:18px;font:800 clamp(22px,2.2vw,30px)/.98 'Oxanium',sans-serif;letter-spacing:-.02em;text-transform:lowercase">Skincare without the markup.</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#E9EEF4"><b style="font-size:13px">Honest active routines</b><span style="flex:none;font-size:12px;font-weight:600;padding:7px 10px;border-radius:6px;background:#D5DDE6">Shop now</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+      <span style="font:500 14px 'Funnel Sans',sans-serif;color:#9FB3CC">Sample run · fictional skincare brand</span>
+      <a href="/app" style="display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 15px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 4px 0 #9A4A12" style-hover="transform:translateY(-2px);color:#0B192C">Get yours in 90 seconds</a>
     </div>
   </div>
-  <p class="caption">Sample story · fictional</p>
 </section>
 
-<section class="field ch-aud">
-  <h2 class="big">Nobody is talking to <span class="open-word">new mums with tired skin</span>.</h2>
-  <div class="two">
-    <div>
-      <div class="aud-row"><h3>Budget glow hunters <span class="chip">crowded</span></h3><p>Students chasing the cheapest brightening fix.</p></div>
-      <div class="aud-row"><h3>Acne fighters <span class="chip">contested</span></h3><p>Teens and twenties with breakouts who want fast results.</p></div>
-      <div class="aud-row t"><h3>New mums with tired skin <span class="chip o">open</span></h3><p>Sleep-deprived, short on time, want one gentle step.</p></div>
-    </div>
-    <p class="lede">The AI reads who each rival ad speaks to and groups them into audiences. You see which ones are crowded and which nobody serves. Disagree? Edit them, pick your target, and regenerate.</p>
-  </div>
-  <p class="caption">Sample story · fictional</p>
-</section>
-
-<section class="field ch-you">
-  <h2 class="big">Your Instagram teaches. Their ads shout discounts.</h2>
-  <div class="two">
-    <div>
-      <p class="lab">Your last 12 posts</p>
-      <div class="vbar"><span>education</span><b style="width:80%"></b><span class="num">72%</span></div>
-      <div class="vbar"><span>founder story</span><b style="width:24%"></b><span class="num">18%</span></div>
-      <p class="lab" style="margin-top:22px">What rivals pay to say</p>
-      <div class="vbar"><span>offer</span><b class="t" style="width:64%"></b><span class="num">51%</span></div>
-      <div class="vbar"><span>pain point</span><b class="t" style="width:40%"></b><span class="num">33%</span></div>
-    </div>
-    <p class="lede">We pull your recent Instagram posts and set them beside what rivals pay to run. The gap is usually your best ad: the thing you already say that nobody else does.</p>
-  </div>
-  <p class="caption">Sample story · fictional</p>
-</section>
-
-<section class="field ch-ads">
-  <h2 class="big">Then, three ads for the open space.</h2>
-  <div class="cards">
-    <article class="card"><h3>aspiration</h3><div class="cr" style="background:var(--violet)">Your skin, but glowier.</div><p>Borrowed the hook structure of a rival ad that has run for months, re-written in your voice.</p></article>
-    <article class="card"><h3>social proof</h3><div class="cr" style="background:var(--magenta)"><span><mark>[4.8★]</mark> from <mark>[N]</mark> real customers.</span></div><p>Highlighted brackets are yours to fill. We never invent ratings, reviews, offers or founder stories.</p></article>
-    <article class="card"><h3>founder story</h3><div class="cr" style="background:var(--cobalt)">We made the boring version on purpose.</div><p>The angle your whole niche ignores. Every ad cites the rival ad it learned from.</p></article>
-  </div>
-  <p class="caption">Sample output · fictional brand</p>
-</section>
-
-<section class="field how">
-  <h2 class="big">One sentence in. A story out.</h2>
-  <p class="madlib">I run <u>Glow &amp; Co</u>. On Instagram I’m <u>@glowandco</u>. I’m up against <u>Rival One</u> and <u>Rival Two</u>.</p>
-  <ol class="steps">
-    <li><h3>He reads everyone</h3><p>Your site, your last 12 Instagram posts, and up to 15 live Meta ads per rival, longest-running first.</p><span class="num">about 30s</span></li>
-    <li><h3>He maps the niche</h3><p>Angles, audiences, and where every ad sits. Crowded corners in colour, open ground in yellow.</p><span class="num">about 30s</span></li>
-    <li><h3>He writes three ads</h3><p>Each on a different angle, aimed at the audience you choose. Correct any read and regenerate.</p><span class="num">about 30s</span></li>
+<section id="how" data-screen-label="03 How it works" style="background:#12243C;color:#F5F8FC;padding:120px max(20px,4vw,calc((100% - 1240px) / 2)) 96px">
+  <h2 style="font:800 clamp(40px,7.4vw,104px)/.92 'Oxanium',sans-serif;letter-spacing:-.03em;text-transform:lowercase;text-wrap:balance;max-width:16ch">Feed. Chew. Fresh out.</h2>
+  <ol style="list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:22px;margin-top:48px">
+    <li style="border-top:2px solid #1E3E62;padding-top:18px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:10px 'Press Start 2P',monospace;color:#7CD2FF">01</span>
+      <h3 style="font:800 24px/1.05 'Oxanium',sans-serif;text-transform:lowercase">He reads everyone</h3>
+      <p style="color:#C9D6E6;max-width:40ch">Your site, your last 12 Instagram posts, and up to 15 live Meta ads per rival, longest-running first.</p>
+      <span style="font:9px 'Press Start 2P',monospace;color:#FFDE59;margin-top:4px">~30S</span>
+    </li>
+    <li style="border-top:2px solid #1E3E62;padding-top:18px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:10px 'Press Start 2P',monospace;color:#7CD2FF">02</span>
+      <h3 style="font:800 24px/1.05 'Oxanium',sans-serif;text-transform:lowercase">He maps the niche</h3>
+      <p style="color:#C9D6E6;max-width:40ch">Angles, audiences, and where every ad sits. Crowded corners in colour, open ground in yellow.</p>
+      <span style="font:9px 'Press Start 2P',monospace;color:#FFDE59;margin-top:4px">~30S</span>
+    </li>
+    <li style="border-top:2px solid #1E3E62;padding-top:18px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:10px 'Press Start 2P',monospace;color:#7CD2FF">03</span>
+      <h3 style="font:800 24px/1.05 'Oxanium',sans-serif;text-transform:lowercase">He writes three ads</h3>
+      <p style="color:#C9D6E6;max-width:40ch">Each on a different angle, aimed at the audience you choose. Correct any read and regenerate.</p>
+      <span style="font:9px 'Press Start 2P',monospace;color:#FFDE59;margin-top:4px">~30S</span>
+    </li>
   </ol>
 </section>
 
-<section class="field honest">
-  <h2 class="big">What we won’t pretend.</h2>
-  <ul>
-    <li><b>No spend, no ROAS.</b><span>Meta doesn’t publish them for commercial ads. We use how long an ad has run and how many versions exist, and we call that a hint, not proof.</span></li>
-    <li><b>No invented claims.</b><span>Ratings, discounts, certifications, founder stories and rival names become placeholders unless you gave them to us.</span></li>
-    <li><b>No copying.</b><span>Any line that repeats a rival’s wording is replaced. We borrow structure, never words.</span></li>
-    <li><b>No posting for you.</b><span>Metacrok never touches your ad account. You review, then paste into Ads Manager.</span></li>
+<section data-screen-label="04 Honest" style="background:#B8532A;color:#F5F8FC;padding:120px max(20px,4vw,calc((100% - 1240px) / 2)) 96px">
+  <h2 style="font:800 clamp(40px,7.4vw,104px)/.92 'Oxanium',sans-serif;letter-spacing:-.03em;text-transform:lowercase;text-wrap:balance;max-width:16ch">What we won’t pretend.</h2>
+  <ul style="list-style:none;margin-top:40px">
+    <li style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px clamp(24px,5vw,72px);padding:24px 0;border-top:2px solid rgba(245,248,252,.3);align-items:baseline">
+      <b style="font:800 clamp(24px,3.2vw,38px)/1 'Oxanium',sans-serif;text-transform:lowercase">No spend, no ROAS.</b>
+      <span style="max-width:60ch">Meta doesn’t publish them for commercial ads. We use how long an ad has run and how many versions exist, and we call that a hint, not proof.</span>
+    </li>
+    <li style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px clamp(24px,5vw,72px);padding:24px 0;border-top:2px solid rgba(245,248,252,.3);align-items:baseline">
+      <b style="font:800 clamp(24px,3.2vw,38px)/1 'Oxanium',sans-serif;text-transform:lowercase">No invented claims.</b>
+      <span style="max-width:60ch">Ratings, discounts, certifications, founder stories and rival names become placeholders unless you gave them to us.</span>
+    </li>
+    <li style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px clamp(24px,5vw,72px);padding:24px 0;border-top:2px solid rgba(245,248,252,.3);align-items:baseline">
+      <b style="font:800 clamp(24px,3.2vw,38px)/1 'Oxanium',sans-serif;text-transform:lowercase">No copying.</b>
+      <span style="max-width:60ch">Any line that repeats a rival’s wording is replaced. We borrow structure, never words.</span>
+    </li>
+    <li style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px clamp(24px,5vw,72px);padding:24px 0;border-top:2px solid rgba(245,248,252,.3);align-items:baseline">
+      <b style="font:800 clamp(24px,3.2vw,38px)/1 'Oxanium',sans-serif;text-transform:lowercase">No posting for you.</b>
+      <span style="max-width:60ch">Metacrok never touches your ad account. You review, then paste into Ads Manager.</span>
+    </li>
   </ul>
 </section>
 
-<section class="field close">
-  <h2 class="huge">Hungry?</h2>
-  <p class="lede" style="margin-top:22px">No sign-up. Name your rivals and get your story in about 90 seconds.</p>
-  <div class="ctas"><a class="btn ink" href="/app">Feed the gator</a></div>
+<section id="agents" data-screen-label="05 For agents" style="background:#0B192C;color:#F5F8FC;padding:120px max(20px,4vw,calc((100% - 1240px) / 2)) 110px;border-top:2px solid #1E3E62">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:clamp(36px,5vw,72px);align-items:center">
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <span style="font:10px 'Press Start 2P',monospace;color:#0B192C;background:#37B7C3;padding:7px 10px;border-radius:4px;align-self:flex-start">MCP + API</span>
+      <h2 style="font:800 clamp(40px,7vw,96px)/.92 'Oxanium',sans-serif;letter-spacing:-.03em;text-transform:lowercase;text-wrap:balance">Let your agent feed the croc.</h2>
+      <p style="font:500 clamp(17px,1.7vw,20px)/1.5 'Funnel Sans',sans-serif;color:#C9D6E6;max-width:46ch;text-wrap:pretty">Metacrok runs inside Claude Code, Claude Desktop or any MCP client. Ask for a teardown in chat and get the map, the gap and three ads back. Or call the HTTP API from your own code.</p>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:10px">
+        <li style="display:flex;gap:12px;align-items:baseline"><b style="font:9px 'Press Start 2P',monospace;color:#FFDE59;flex:none">11</b><span>tools: start a run, read the report, tweak an ad, regenerate</span></li>
+        <li style="display:flex;gap:12px;align-items:baseline"><b style="font:9px 'Press Start 2P',monospace;color:#FFDE59;flex:none">0</b><span>ads posted for you. Your agent hands them back for review</span></li>
+      </ul>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px">
+        <a href="https://github.com/SPEEDBOT38/metacrok/blob/main/docs/MCP.md" style="display:inline-flex;align-items:center;min-height:54px;padding:0 26px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 5px 0 #9A4A12" style-hover="transform:translateY(-2px);color:#0B192C">Read the docs</a>
+        <a href="https://github.com/SPEEDBOT38/metacrok/blob/main/docs/MCP.md#tools" style="display:inline-flex;align-items:center;min-height:54px;padding:0 24px;border-radius:8px;color:#F5F8FC;font:600 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:inset 0 0 0 2px #37B7C3" style-hover="transform:translateY(-2px);color:#F5F8FC">See all tools</a>
+      </div>
+    </div>
+    <div style="background:#06101D;border:2px solid #1E3E62;border-radius:12px;overflow:hidden;box-shadow:0 8px 0 #06101D">
+      <div style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid #1E3E62"><i style="width:10px;height:10px;border-radius:2px;background:#F7862A"></i><i style="width:10px;height:10px;border-radius:2px;background:#FFD23A"></i><i style="width:10px;height:10px;border-radius:2px;background:#3DBA4E"></i><span style="margin-left:8px;font:500 12px ui-monospace,monospace;color:#6F86A3">terminal</span></div>
+      <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;font:400 14px/1.65 ui-monospace,'JetBrains Mono',monospace">
+        <p><span style="color:#3DBA4E">$</span> claude mcp add metacrok -- node mcp/bin.js</p>
+        <p style="color:#6F86A3">✓ Added stdio MCP server metacrok</p>
+        <div style="border-top:1px dashed #1E3E62;padding-top:14px;display:flex;flex-direction:column;gap:10px">
+          <p><span style="color:#7CD2FF">&gt;</span> <span style="color:#F5F8FC">Run Metacrok for beminimalist.co vs Dot &amp; Key and Mamaearth.</span></p>
+          <p style="color:#9FB3CC">⏺ metacrok_start_run <span style="color:#6F86A3">… 62%</span><br>⏺ metacrok_wait_for_run <span style="color:#3DBA4E">done · 74s</span></p>
+          <p style="color:#F5F8FC;font-family:'Funnel Sans',sans-serif;font-size:15px;line-height:1.5">Nobody in your niche explains how the ingredients work. 63% of rival ads lead with a discount or a pain point. <span style="background:#FFD23A;color:#0B192C;padding:0 4px;border-radius:3px">Three ads for that gap</span> are below.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
-<footer><span>metacrok · eats ads, spits out better ones</span><span>Sample sections use fictional brands and numbers.</span></footer>
+<section data-screen-label="06 Close" style="position:relative;min-height:620px;overflow:hidden;background:#1150AB;display:flex;flex-direction:column">
+  <div style="position:absolute;inset:0;z-index:0">
+    <croc-game base="assets/game/" autopilot="on" style="position:absolute;inset:0;display:block"></croc-game>
+  </div>
+  <div style="position:relative;z-index:1;padding:96px max(20px,4vw,calc((100% - 1240px) / 2)) 0;pointer-events:none">
+    <h2 style="font:800 clamp(72px,16vw,220px)/.82 'Oxanium',sans-serif;letter-spacing:-.04em;text-transform:lowercase;text-shadow:0 .04em 0 #0B192C">Hungry?</h2>
+    <p style="margin-top:22px;max-width:40ch;font:500 18px/1.5 'Funnel Sans',sans-serif;background:rgba(11,25,44,.82);padding:12px 16px;border-radius:8px;display:inline-block">No sign-up. Name your rivals and get your story in about 90 seconds.</p>
+    <div style="margin-top:20px;pointer-events:auto;display:flex">
+      <a href="/app" style="display:inline-flex;align-items:center;min-height:54px;padding:0 28px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 5px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 7px 0 #0B192C;color:#0B192C">Feed the croc</a>
+    </div>
+  </div>
+</section>
 
+<footer style="background:#0B192C;padding:28px max(20px,4vw,calc((100% - 1240px) / 2)) 40px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;color:#9FB3CC;font-size:14px">
+  <img src="assets/logo-white.png" alt="metacrok" style="height:22px;width:auto;opacity:.9">
+  <span style="display:flex;gap:20px;flex-wrap:wrap"><a href="https://github.com/SPEEDBOT38/metacrok/blob/main/docs/MCP.md" style="color:#C9D6E6">Developer docs</a><a href="https://github.com/SPEEDBOT38/metacrok/blob/main/docs/MCP.md#tools" style="color:#C9D6E6">MCP server</a><span>Sample sections use fictional brands and numbers.</span></span>
+</footer>
+<script src="/croc-game.js"></script>
 <script>
-  // the nav turns solid once the tangerine opening scrolls away
-  const nav = document.getElementById('nav'), hero = document.querySelector('.hero');
-  new IntersectionObserver(([e]) => nav.classList.toggle('solid', !e.isIntersecting), { rootMargin: '-60px 0px 0px 0px' }).observe(hero);
-  // the one authored moment: the headline rises into place. It starts mostly visible, so a throttled
-  // or skipped animation can never leave the page without its headline.
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches && !document.hidden) {
-    document.querySelectorAll('.hero .fill').forEach((el, i) => el.animate(
-      [{ transform: 'translateY(.14em)', opacity: .45 }, { transform: 'none', opacity: 1 }],
-      { duration: 900, delay: 100 + i * 200, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }));
-  }
+// score HUD from the game
+(function () {
+  var a = document.getElementById('hud-ads'), g = document.getElementById('hud-gems');
+  window.addEventListener('croc:score', function (e) {
+    if (a) a.textContent = String(e.detail.ads).padStart(4, '0');
+    if (g) g.textContent = String(e.detail.gems).padStart(2, '0');
+  });
+  // hover styles (style-hover attribute)
+  document.querySelectorAll('[style-hover]').forEach(function (el) {
+    var base = el.getAttribute('style');
+    el.addEventListener('mouseenter', function () { el.setAttribute('style', base + ';' + el.getAttribute('style-hover')); });
+    el.addEventListener('mouseleave', function () { el.setAttribute('style', base); });
+  });
+})();
 </script>
 </body>
 </html>
