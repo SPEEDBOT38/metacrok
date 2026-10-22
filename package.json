@@ -1,0 +1,14 @@
+{
+  "name": "metacrok",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node scripts/check.js && node scripts/check-controls.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.2.17",
+    "pg": "^8.13.1"
+  }
+}

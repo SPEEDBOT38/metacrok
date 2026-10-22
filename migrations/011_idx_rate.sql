@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS rate_hits_bucket_idx ON rate_hits (bucket, ts)

@@ -1,0 +1,234 @@
+{
+  "title": "Choose Metacrok's visual world",
+  "question": "The roll assigned The Spec Label. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "The Spec Label",
+      "kicker": "THE ROLL",
+      "lineage": "D2C product labels and ingredient panels (Minimalist, Aesop, nutrition-facts typography)",
+      "thesis": "Every competitor is read like a product label: its angle mix printed as an ingredient list, its audience as 'made for'.",
+      "palette": [
+        "#F4F3EE",
+        "#121212",
+        "#F58545",
+        "#DD2A7B",
+        "#8134AF",
+        "#FFC24B",
+        "#1F9E77"
+      ],
+      "materials": [
+        "label stock with hairline rules",
+        "colour-coded SKU fields",
+        "batch-number mono",
+        "tabular percentages"
+      ],
+      "viewport": "Results open on a row of tall label cards, one per brand in its own saturated SKU colour, each listing 'Ingredients: pain point 35%, offer 18%…' in huge type, with your brand's label set beside them and the 'missing ingredient' (whitespace) circled in yellow.",
+      "risk": "Can tip into a beauty-only look; the label grammar must stay generic enough for snacks or apparel founders.",
+      "raised": [
+        {
+          "from": "challenger-gate-board",
+          "raise": "A corrected read or edited audience stays lit in one change colour until you regenerate."
+        },
+        {
+          "from": "challenger-terminal-yellow",
+          "raise": "Yellow means one thing only: open space nobody owns."
+        },
+        {
+          "from": "challenger-emission-rail",
+          "raise": "What we observed is drawn solid; what the AI inferred (audiences, positions) is drawn dashed."
+        },
+        {
+          "from": "challenger-streaming-wall",
+          "raise": "The ad wall: the ad you focus grows to show its read while the rest dim."
+        },
+        {
+          "from": "challenger-labanotation",
+          "raise": "Length is the number: every bar and every days-running mark is drawn exactly to scale."
+        }
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "The Year-in-Review Story",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Spotify Wrapped-style colour stories",
+      "thesis": "Your niche told as a sequence of full-bleed colour fields, one finding per field in enormous type.",
+      "palette": [
+        "#121212",
+        "#F58545",
+        "#DD2A7B",
+        "#8134AF",
+        "#FFC24B",
+        "#B6F0D3"
+      ],
+      "materials": [
+        "full-bleed colour fields",
+        "giant cropped grotesk",
+        "swipeable chapters"
+      ],
+      "viewport": "A magenta field filling the screen: 'Your rivals said “glow” 41 times.' with the next finding peeking from the right.",
+      "risk": "The most familiar direction; founders have seen this format every December, and dense comparison is harder to read in it."
+    },
+    {
+      "id": "challenger-metro",
+      "label": "Typographic Tiles",
+      "verdict": "competitive",
+      "lineage": "metro-style flat tiles with giant lowercase type",
+      "thesis": "Each finding is a flat colour tile; type cropped off the edge is the interface.",
+      "palette": [
+        "#0B0B0C",
+        "#00B7C3",
+        "#DD2A7B",
+        "#B4E33D",
+        "#FFFFFF"
+      ],
+      "materials": [
+        "flat colour tiles",
+        "giant light lowercase",
+        "panorama panes"
+      ],
+      "viewport": "A sideways panorama: 'whitespace' cropped in giant lowercase across a lime tile, competitor tiles flipping to fresh stats.",
+      "case": "Fuses cleanly (findings as tiles, colour as content) and stays clear, but Indian D2C founders have no attachment to the tile world.",
+      "risk": "Reads as a 2012 phone UI when the type is not huge.",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-metro-typographic-tiles-hero.webp"
+    },
+    {
+      "id": "challenger-gate-board",
+      "label": "Boarding Pass & Gate Board",
+      "verdict": "declined",
+      "lineage": "airport departures boards",
+      "thesis": "Competitors as flights reranked by how long their ads have run.",
+      "palette": [
+        "#111111",
+        "#F2F2F2",
+        "#FFB000"
+      ],
+      "materials": [
+        "segmented pass",
+        "split-flap rows"
+      ],
+      "viewport": "A departures board of ads ranked by days running.",
+      "case": "Founders don't read their niche as a timetable; loses audience and clarity.",
+      "kept": "Changes hold their highlight until acknowledged.",
+      "risk": "A metaphor with no link to marketing."
+    },
+    {
+      "id": "challenger-terminal-yellow",
+      "label": "Terminal Wayfinding",
+      "verdict": "declined",
+      "lineage": "airport yellow signage",
+      "thesis": "Each decision point signs only the choices ahead.",
+      "palette": [
+        "#FFD100",
+        "#111111",
+        "#FFFFFF"
+      ],
+      "materials": [
+        "overhead sign bands",
+        "pictograms"
+      ],
+      "viewport": "One yellow band: 'Whitespace → founder story, 12 ads away'.",
+      "case": "Too single-colour for a brief that asks for more colour.",
+      "kept": "One colour reserved for one meaning.",
+      "risk": "Monotone."
+    },
+    {
+      "id": "challenger-emission-rail",
+      "label": "Emission Line Rail",
+      "verdict": "declined",
+      "lineage": "spectrograph plates",
+      "thesis": "State carried by line form on a charcoal continuum.",
+      "palette": [
+        "#2A2A2E",
+        "#E8E2D6",
+        "#FFD84D"
+      ],
+      "materials": [
+        "hairline spectra",
+        "charcoal continuum"
+      ],
+      "viewport": "Ads as needle lines on one rail.",
+      "case": "Beautiful but cold and colour-starved; founders can't read it at a glance.",
+      "kept": "Observed vs inferred shown by line form.",
+      "risk": "Unreadable to non-specialists."
+    },
+    {
+      "id": "challenger-streaming-wall",
+      "label": "Streaming Title Wall",
+      "verdict": "declined",
+      "lineage": "streaming catalogue rows",
+      "thesis": "Ads as poster rows; the focused one expands.",
+      "palette": [
+        "#141414",
+        "#E50914",
+        "#FFFFFF"
+      ],
+      "materials": [
+        "poster tiles",
+        "horizontal rails"
+      ],
+      "viewport": "Rows of competitor ads by angle.",
+      "case": "Good for browsing ads, weak for comparison and maps.",
+      "kept": "Focus expands one ad, dims the rest.",
+      "risk": "Becomes another swipe file."
+    },
+    {
+      "id": "challenger-labanotation",
+      "label": "Dance Score",
+      "verdict": "declined",
+      "lineage": "labanotation",
+      "thesis": "Shape and length encode exact quantity.",
+      "palette": [
+        "#FFFFFF",
+        "#111111",
+        "#BDBDBD"
+      ],
+      "materials": [
+        "score paper",
+        "shaded blocks"
+      ],
+      "viewport": "A vertical staff of ad durations.",
+      "case": "No audience connection; monochrome.",
+      "kept": "Length is exact quantity.",
+      "risk": "Esoteric."
+    }
+  ],
+  "reroll": {
+    "registers": [
+      "safer",
+      "bolder"
+    ]
+  },
+  "buildPath": {
+    "value": "code",
+    "toggle": false
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A clean SaaS analytics dashboard, like Foreplay or Motion, executed at full craft.",
+    "palette": [
+      "#FFFFFF",
+      "#0F172A",
+      "#6366F1"
+    ],
+    "materials": [
+      "sidebar nav",
+      "KPI cards",
+      "charts on white"
+    ],
+    "viewport": "Sidebar, KPI row, charts grid, ad gallery.",
+    "risk": "Indistinguishable from every ad-spy tool by design."
+  },
+  "steer": true,
+  "seed": {
+    "key": "14a7b7ad",
+    "mode": "operate",
+    "scope": "direction",
+    "assignedIndex": 3,
+    "assigned": "The Spec Label",
+    "chosen": "model-pick (The Year-in-Review Story, rank 1 of 7)",
+    "note": "concept-seed.mjs prints its roll to stdout only; recorded here by hand on 2026-10-22."
+  }
+}

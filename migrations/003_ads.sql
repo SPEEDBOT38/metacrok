@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS ads (
+  id text PRIMARY KEY,
+  source text NOT NULL,
+  competitor text,
+  page_id text,
+  page_name text,
+  body text,
+  headline text,
+  description text,
+  cta text,
+  link_url text,
+  image_url text,
+  visual_note text,
+  display_format text,
+  platforms jsonb,
+  start_date timestamptz,
+  collation_count int,
+  ad_library_url text,
+  fetched_at timestamptz NOT NULL DEFAULT now()
+)

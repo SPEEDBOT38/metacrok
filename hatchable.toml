@@ -1,0 +1,31 @@
+name = "Metacrok"
+
+# Claude does the vision read (Haiku), whitespace synthesis + generation (Sonnet),
+# and competitor discovery via Anthropic's web_search tool.
+[ai]
+required    = true
+providers   = ["anthropic"]
+description = "Claude reads competitor ads (vision), finds competitors (web search) and writes the variants."
+
+# Live Meta Ad Library pull via an Apify actor. Optional: without it the app
+# runs on the bundled demo seed ads, so the demo never breaks.
+[[api]]
+name        = "apify"
+auth        = "api_key"
+base_url    = "https://api.apify.com/v2"
+key_header  = "Authorization"
+key_prefix  = "Bearer "
+required    = false
+description = "Apify API token (console.apify.com > Settings > API & Integrations). Powers the live Meta Ad Library pull."
+
+[[config]]
+name    = "apify_actor"
+type    = "text"
+label   = "Apify actor for the Ad Library pull (owner~name)"
+default = "curious_coder~facebook-ads-library-scraper"
+
+[[config]]
+name    = "apify_price_per_1k"
+type    = "text"
+label   = "Actor price, USD per 1,000 ads (for the cost readout)"
+default = "0.75"

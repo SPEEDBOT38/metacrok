@@ -1,0 +1,4 @@
+ALTER TABLE runs
+  ADD COLUMN IF NOT EXISTS icp jsonb,
+  ADD COLUMN IF NOT EXISTS icp_at timestamptz,
+  ADD COLUMN IF NOT EXISTS ig jsonb

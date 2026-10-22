@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E0D0C">
+<title>Feed the gator — metacrok</title>
+<link rel="icon" href="/img/gator-peek.webp">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Funnel+Sans:wght@300..800&family=Spline+Sans+Mono:wght@400..600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<!--
+THESIS: Your niche, told as a year-in-review story: one finding per full-bleed colour field, in enormous type, then the data that proves it. Refuses the category default of a sidebar dashboard of KPI cards and charts on white.
+OWN-WORLD: Night ground (#0E0D0C) with drenched chapter fields (tangerine, magenta, violet, mint, cobalt); yellow (#FFC24B) means open space and nothing else; Bricolage Grotesque condensed display, Funnel Sans text, Spline Sans Mono for every number; observed data drawn solid, AI inference drawn dashed.
+STORY: The founder sees where rivals crowd and where nobody stands (verdict, loudest angles, the map, audiences, their own Instagram against the rivals), then gets three ads aimed at the open space, and can correct any read and regenerate.
+FIRST VIEWPORT: Results open on a tangerine field filled edge to edge by the whitespace sentence at display scale, the brand-vs-rivals line above it, the run's facts in mono beneath, and the chapter rail pinned at the top.
+FORM: Year-in-review colour story; the user chose it as IMPECCABLE'S PICK (my rank 1 of 7) over the roll's assigned The Spec Label (rank 3) in the direction round recorded in .impeccable/decision/direction.json; seed key 14a7b7ad.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+
+<header class="top">
+  <a class="wordmark" href="/">metacrok</a>
+  <ol class="steps" aria-label="Progress">
+    <li data-step="feed" aria-current="step">Feed</li>
+    <li data-step="chew">Chew</li>
+    <li data-step="fresh">Fresh out</li>
+  </ol>
+  <div class="mode" id="pull-mode"><i></i><span>checking</span></div>
+</header>
+
+<!-- ================= FEED ================= -->
+<main id="onboard" class="page feed">
+  <form id="ob-form" class="sentence" novalidate>
+    <h1 class="feed-title">Feed the gator.</h1>
+    <p class="feed-lede">Fill in the sentence. He reads your rivals’ live Meta ads and your Instagram, maps where they crowd, and writes three ads for the open space.</p>
+
+    <p class="madlib">
+      I run <label class="blank"><span class="sr">Brand name</span><input id="f-name" autocomplete="organization" placeholder="brand name" size="10"></label>,
+      online at <label class="blank"><span class="sr">Website</span><input id="f-url" inputmode="url" autocapitalize="off" placeholder="yourstore.com" size="12"></label>.
+      On Instagram I’m <label class="blank"><span class="sr">Your Instagram handle (optional)</span><input id="f-ig" autocapitalize="off" placeholder="@handle" size="9"></label>.
+      I’m up against <label class="blank"><span class="sr">Competitor 1</span><input class="f-comp" autocapitalize="off" placeholder="rival one" size="9"></label>,
+      <label class="blank"><span class="sr">Competitor 2 (optional)</span><input class="f-comp" autocapitalize="off" placeholder="rival two" size="9"></label>
+      and <label class="blank"><span class="sr">Competitor 3 (optional)</span><input class="f-comp" autocapitalize="off" placeholder="rival three" size="9"></label>.
+    </p>
+    <p class="hint">Rivals can be a brand name, an @handle or a Facebook page link. An @handle also pulls their Instagram. No Instagram? We’ll find it on your site, or compare from your site alone.</p>
+
+    <div class="feed-row">
+      <button type="button" id="btn-suggest" class="btn ghost">Find my rivals</button>
+      <button type="button" id="btn-demo-names" class="linkish">use the demo brands</button>
+    </div>
+    <div id="suggestions" class="suggestions" hidden></div>
+
+    <fieldset class="goal">
+      <legend>These ads are for</legend>
+      <div class="pills" role="radiogroup" aria-label="Ad goal">
+        <label class="pill"><input type="radio" name="goal" value="cold traffic" checked><span>cold traffic</span></label>
+        <label class="pill"><input type="radio" name="goal" value="retargeting"><span>retargeting</span></label>
+        <label class="pill"><input type="radio" name="goal" value="product launch"><span>a launch</span></label>
+        <label class="pill"><input type="radio" name="goal" value="sale or offer"><span>a sale</span></label>
+      </div>
+    </fieldset>
+
+    <label class="notes"><span>What makes your product different, and anything to avoid</span>
+      <textarea id="f-notes" rows="2" maxlength="400" placeholder="10% niacinamide, fragrance-free · never discount · no emoji"></textarea>
+    </label>
+
+    <div class="settings">
+      <label class="field"><span>Ad Library market</span>
+        <select id="f-country"><option value="IN">India</option><option value="US">United States</option><option value="GB">United Kingdom</option><option value="AE">UAE</option><option value="AU">Australia</option><option value="CA">Canada</option><option value="SG">Singapore</option><option value="ALL">All markets</option></select>
+      </label>
+      <label class="check"><input type="checkbox" id="f-demo"><span><b>Demo mode</b> Use saved fictional ads instead of a live pull</span></label>
+    </div>
+
+    <div class="feed-bar">
+      <p id="ob-error" class="err" role="alert"></p>
+      <button type="submit" class="btn feed-go" id="btn-feed">Feed him</button>
+    </div>
+  </form>
+  <img class="gator feed-gator" src="/img/gator-peek.webp" alt="" width="260" height="238">
+</main>
+
+<!-- ================= CHEW ================= -->
+<main id="run" class="page run" hidden>
+  <section id="scene" class="scene" data-stage="brand" aria-label="Live run">
+    <div class="run-bar">
+      <div class="run-who"><b id="rb-brand">your brand</b> <span>vs</span> <span id="rb-comps"></span></div>
+      <div class="run-meta"><span id="rb-source" class="badge" hidden></span><span class="num" id="rb-clock">0.0s</span></div>
+    </div>
+    <div class="sc-title">
+      <div class="scene-word" id="scene-word" aria-live="polite">SNIFFING</div>
+      <div class="scene-fill" id="scene-fill" aria-hidden="true">SNIFFING</div>
+    </div>
+    <img id="scene-gator" class="gator sc-gator" src="/img/gator-chomp.webp" alt="" width="400" height="400">
+    <div class="sc-meter">
+      <div class="pct num" id="pct">0%</div>
+      <div class="gen-rule"><i id="rule"></i></div>
+      <div id="stage-label" class="stage-label">reading your page</div>
+    </div>
+    <ol class="gen-log" id="log" aria-live="polite"></ol>
+    <div id="flyers" class="flyers" aria-hidden="true"></div>
+    <div id="crumbs" class="crumbs" aria-hidden="true"></div>
+  </section>
+
+  <div id="run-error" class="run-error" hidden>
+    <p id="run-error-msg"></p>
+    <div class="actions"><button class="btn" id="btn-retry-demo">Run it on the demo ads</button><a class="btn ghost" href="/app">Start over</a></div>
+  </div>
+
+  <!-- ================= FRESH OUT: the story ================= -->
+  <section id="results" class="results" hidden>
+    <nav class="chapters" aria-label="Chapters">
+      <a href="#ch-verdict">Verdict</a><a href="#ch-loud">Loudest</a><a href="#ch-map">The map</a><a href="#ch-aud">Audiences</a><a href="#ch-you">You vs them</a><a href="#ch-ads">Your ads</a><a href="#ch-wall">Every ad</a>
+    </nav>
+
+    <section id="ch-verdict" class="ch ch-verdict">
+      <h2 class="find" id="v-head"></h2>
+      <p class="ch-sub" id="v-sub"></p>
+      <p class="facts num" id="run-summary"></p>
+      <div id="seed-note" class="seed-note" hidden></div>
+    </section>
+
+    <section id="ch-loud" class="ch ch-loud">
+      <h2 class="find" id="loud-head"></h2>
+      <p class="ch-sub" id="loud-sub"></p>
+      <div id="loud" class="matrix-wrap"></div>
+    </section>
+
+    <section id="ch-map" class="ch ch-map">
+      <h2 class="find" id="map-head"></h2>
+      <p class="ch-sub" id="map-sub"></p>
+      <div class="map-grid">
+        <figure class="map-fig"><div id="map" class="map"></div><div id="map-tip" class="map-tip" role="status" hidden></div></figure>
+        <aside class="map-side"><div id="map-legend" class="legend"></div><div id="map-dist" class="dist"></div></aside>
+      </div>
+    </section>
+
+    <section id="ch-aud" class="ch ch-aud">
+      <h2 class="find" id="aud-head"></h2>
+      <p class="ch-sub" id="aud-sub"></p>
+      <div id="aud" class="aud"></div>
+      <div class="aud-actions"><button type="button" class="btn ink" id="btn-aud-edit">Edit audiences</button><span id="aud-basis" class="basis"></span></div>
+    </section>
+
+    <section id="ch-you" class="ch ch-you">
+      <h2 class="find" id="you-head"></h2>
+      <p class="ch-sub" id="you-sub"></p>
+      <div id="you" class="you"></div>
+    </section>
+
+    <section id="ch-ads" class="ch ch-ads">
+      <h2 class="find">Three ads for the open space.</h2>
+      <p class="ch-sub">Each tests a different angle. Brackets are yours to fill in; we never invent ratings, offers or stories. You review, then paste into Ads Manager.</p>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section id="ch-wall" class="ch ch-wall">
+      <h2 class="find small">Every ad he ate.</h2>
+      <p class="ch-sub"><span id="ads-count" class="num"></span> Don’t trust a read? Set an ad aside or fix its angle. Nothing changes until you regenerate.</p>
+      <div id="ads" class="ads"></div>
+      <details class="logbox"><summary>Kitchen log</summary><ol class="gen-log static" id="log-final"></ol></details>
+      <div class="outro">
+        <img class="gator" src="/img/gator-sit.webp" alt="" width="120" height="124">
+        <div>
+          <h3>Ads go stale in a few weeks.</h3>
+          <p>Leave your email and we’ll tell you when the gator can re-feed automatically. Optional.</p>
+          <form id="lead" class="lead"><input type="email" id="lead-email" placeholder="you@brand.com" aria-label="Email" required><button class="btn">Keep me posted</button></form>
+          <p class="basis" id="lead-msg"></p>
+          <a class="btn ghost" href="/app">Feed him again</a>
+        </div>
+      </div>
+    </section>
+
+    <div id="changes" class="changes" hidden>
+      <p><b id="changes-n"></b> not applied yet. Regenerating replaces the three ads and any tweaks.</p>
+      <button class="btn open" id="btn-regen" type="button">Regenerate</button>
+    </div>
+  </section>
+</main>
+
+<button id="dev-toggle" class="dev-toggle num" hidden aria-expanded="false" aria-controls="dev">$0.0000</button>
+<aside id="dev" class="dev" hidden aria-label="Cost per run">
+  <div class="dev-head"><b>Cost of this run</b><button class="linkish" id="dev-close">close</button></div>
+  <div id="dev-body"></div>
+</aside>
+<div id="toast" class="toast" role="status"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

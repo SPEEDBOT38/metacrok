@@ -1,0 +1,473 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T06:11:40.962Z",
+  "title": "Design System: metacrok",
+  "extensions": {
+    "colorMeta": {
+      "night": {
+        "role": "neutral",
+        "displayName": "Night",
+        "tonalRamp": [
+          "oklch(15% 0.001 67.6)",
+          "oklch(25% 0.001 67.6)",
+          "oklch(35% 0.003 67.6)",
+          "oklch(48% 0.003 67.6)",
+          "oklch(60% 0.003 67.6)",
+          "oklch(72% 0.003 67.6)",
+          "oklch(84% 0.003 67.6)",
+          "oklch(95% 0.001 67.6)"
+        ]
+      },
+      "night-2": {
+        "role": "neutral",
+        "displayName": "Night 2",
+        "tonalRamp": [
+          "oklch(15% 0.003 67.5)",
+          "oklch(25% 0.003 67.5)",
+          "oklch(35% 0.005 67.5)",
+          "oklch(48% 0.005 67.5)",
+          "oklch(60% 0.005 67.5)",
+          "oklch(72% 0.005 67.5)",
+          "oklch(84% 0.005 67.5)",
+          "oklch(95% 0.003 67.5)"
+        ]
+      },
+      "night-3": {
+        "role": "neutral",
+        "displayName": "Night 3",
+        "tonalRamp": [
+          "oklch(15% 0.004 67.5)",
+          "oklch(25% 0.004 67.5)",
+          "oklch(35% 0.007 67.5)",
+          "oklch(48% 0.007 67.5)",
+          "oklch(60% 0.007 67.5)",
+          "oklch(72% 0.007 67.5)",
+          "oklch(84% 0.007 67.5)",
+          "oklch(95% 0.004 67.5)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15% 0.007 74.4)",
+          "oklch(25% 0.007 74.4)",
+          "oklch(35% 0.014 74.4)",
+          "oklch(48% 0.014 74.4)",
+          "oklch(60% 0.014 74.4)",
+          "oklch(72% 0.014 74.4)",
+          "oklch(84% 0.014 74.4)",
+          "oklch(95% 0.007 74.4)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Soft",
+        "tonalRamp": [
+          "oklch(15% 0.010 77.3)",
+          "oklch(25% 0.010 77.3)",
+          "oklch(35% 0.020 77.3)",
+          "oklch(48% 0.020 77.3)",
+          "oklch(60% 0.020 77.3)",
+          "oklch(72% 0.020 77.3)",
+          "oklch(84% 0.020 77.3)",
+          "oklch(95% 0.010 77.3)"
+        ]
+      },
+      "dim": {
+        "role": "neutral",
+        "displayName": "Dim",
+        "tonalRamp": [
+          "oklch(15% 0.010 75.2)",
+          "oklch(25% 0.010 75.2)",
+          "oklch(35% 0.020 75.2)",
+          "oklch(48% 0.020 75.2)",
+          "oklch(60% 0.020 75.2)",
+          "oklch(72% 0.020 75.2)",
+          "oklch(84% 0.020 75.2)",
+          "oklch(95% 0.010 75.2)"
+        ]
+      },
+      "tangerine": {
+        "role": "primary",
+        "displayName": "Gator Tangerine",
+        "tonalRamp": [
+          "oklch(15% 0.079 48.2)",
+          "oklch(25% 0.079 48.2)",
+          "oklch(35% 0.157 48.2)",
+          "oklch(48% 0.157 48.2)",
+          "oklch(60% 0.157 48.2)",
+          "oklch(72% 0.157 48.2)",
+          "oklch(84% 0.157 48.2)",
+          "oklch(95% 0.079 48.2)"
+        ]
+      },
+      "magenta": {
+        "role": "secondary",
+        "displayName": "Deep Magenta",
+        "tonalRamp": [
+          "oklch(15% 0.100 359.4)",
+          "oklch(25% 0.100 359.4)",
+          "oklch(35% 0.200 359.4)",
+          "oklch(48% 0.200 359.4)",
+          "oklch(60% 0.200 359.4)",
+          "oklch(72% 0.200 359.4)",
+          "oklch(84% 0.200 359.4)",
+          "oklch(95% 0.100 359.4)"
+        ]
+      },
+      "violet": {
+        "role": "secondary",
+        "displayName": "Story Violet",
+        "tonalRamp": [
+          "oklch(15% 0.095 309.8)",
+          "oklch(25% 0.095 309.8)",
+          "oklch(35% 0.190 309.8)",
+          "oklch(48% 0.190 309.8)",
+          "oklch(60% 0.190 309.8)",
+          "oklch(72% 0.190 309.8)",
+          "oklch(84% 0.190 309.8)",
+          "oklch(95% 0.095 309.8)"
+        ]
+      },
+      "mint": {
+        "role": "secondary",
+        "displayName": "Fresh Mint",
+        "tonalRamp": [
+          "oklch(15% 0.042 164.0)",
+          "oklch(25% 0.042 164.0)",
+          "oklch(35% 0.085 164.0)",
+          "oklch(48% 0.085 164.0)",
+          "oklch(60% 0.085 164.0)",
+          "oklch(72% 0.085 164.0)",
+          "oklch(84% 0.085 164.0)",
+          "oklch(95% 0.042 164.0)"
+        ]
+      },
+      "cobalt": {
+        "role": "secondary",
+        "displayName": "Electric Cobalt",
+        "tonalRamp": [
+          "oklch(15% 0.100 267.5)",
+          "oklch(25% 0.100 267.5)",
+          "oklch(35% 0.200 267.5)",
+          "oklch(48% 0.200 267.5)",
+          "oklch(60% 0.200 267.5)",
+          "oklch(72% 0.200 267.5)",
+          "oklch(84% 0.200 267.5)",
+          "oklch(95% 0.100 267.5)"
+        ]
+      },
+      "pink": {
+        "role": "tertiary",
+        "displayName": "Brand Pink",
+        "tonalRamp": [
+          "oklch(15% 0.100 359.7)",
+          "oklch(25% 0.100 359.7)",
+          "oklch(35% 0.200 359.7)",
+          "oklch(48% 0.200 359.7)",
+          "oklch(60% 0.200 359.7)",
+          "oklch(72% 0.200 359.7)",
+          "oklch(84% 0.200 359.7)",
+          "oklch(95% 0.100 359.7)"
+        ]
+      },
+      "open": {
+        "role": "tertiary",
+        "displayName": "Open-Ground Yellow",
+        "tonalRamp": [
+          "oklch(15% 0.074 80.7)",
+          "oklch(25% 0.074 80.7)",
+          "oklch(35% 0.148 80.7)",
+          "oklch(48% 0.148 80.7)",
+          "oklch(60% 0.148 80.7)",
+          "oklch(72% 0.148 80.7)",
+          "oklch(84% 0.148 80.7)",
+          "oklch(95% 0.074 80.7)"
+        ]
+      },
+      "err": {
+        "role": "tertiary",
+        "displayName": "Alarm Coral",
+        "tonalRamp": [
+          "oklch(15% 0.083 28.3)",
+          "oklch(25% 0.083 28.3)",
+          "oklch(35% 0.165 28.3)",
+          "oklch(48% 0.165 28.3)",
+          "oklch(60% 0.165 28.3)",
+          "oklch(72% 0.165 28.3)",
+          "oklch(84% 0.165 28.3)",
+          "oklch(95% 0.083 28.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Chew stage word and landing headline; fit to one line."
+      },
+      "headline": {
+        "displayName": "Finding",
+        "purpose": "Every chapter finding; the Verdict grows larger, long findings step down."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Audience names, variant angles, creative hooks, outro heading."
+      },
+      "sentence": {
+        "displayName": "Sentence",
+        "purpose": "The Feed form written as one sentence."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default Funnel Sans text."
+      },
+      "lede": {
+        "displayName": "Chapter lede",
+        "purpose": "The explanation under a finding, 62ch max."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Steps, chapter rail, pills, tags, buttons."
+      },
+      "number": {
+        "displayName": "Number",
+        "purpose": "Every counted value, tabular figures."
+      },
+      "number-hero": {
+        "displayName": "Progress number",
+        "purpose": "The Chew percentage."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 14px 40px rgba(0,0,0,.45)",
+        "purpose": "Pending-changes bar."
+      },
+      {
+        "name": "popover",
+        "value": "0 18px 50px rgba(0,0,0,.5)",
+        "purpose": "Cost readout panel (dev only)."
+      },
+      {
+        "name": "tip",
+        "value": "0 10px 30px rgba(0,0,0,.3)",
+        "purpose": "Map tooltip."
+      },
+      {
+        "name": "toast",
+        "value": "0 12px 30px rgba(0,0,0,.35)",
+        "purpose": "Toast."
+      },
+      {
+        "name": "flyer",
+        "value": "0 12px 26px rgba(0,0,0,.25)",
+        "purpose": "Ad thumbnails flying across the Chew stage."
+      },
+      {
+        "name": "live-glow",
+        "value": "0 0 0 4px rgba(87,214,160,.18)",
+        "purpose": "Live-data indicator dot only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "House ease for transitions and both authored moments."
+      },
+      {
+        "name": "press",
+        "value": "transform .2s var(--ease)",
+        "purpose": "Button lift on hover (-1px) and press (+1px)."
+      },
+      {
+        "name": "landing-rise",
+        "value": "translateY(.14em), opacity .45 to none, 1; 900ms; delay 100ms + 200ms per line; fill backwards",
+        "purpose": "Landing headline rise. Starts mostly visible; skipped under reduced motion or a hidden tab."
+      },
+      {
+        "name": "chew-field",
+        "value": "background .9s var(--ease), color .6s",
+        "purpose": "Chew stage field colour change per stage."
+      },
+      {
+        "name": "chew-fill",
+        "value": "clip-path 1.1s var(--ease)",
+        "purpose": "Stage word fills left to right with progress."
+      },
+      {
+        "name": "chew-bob",
+        "value": "translateY(-.04em) scaleY(.94), .9s ease-in-out infinite alternate, .09s per-letter stagger",
+        "purpose": "Letters bob while analyzing and synthesizing; off under reduced motion."
+      },
+      {
+        "name": "toast",
+        "value": "opacity .3s, transform .4s var(--ease)",
+        "purpose": "Toast drop-in."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "600px"
+      },
+      {
+        "name": "landing",
+        "value": "700px"
+      },
+      {
+        "name": "md",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Paper pill; the default action on dark fields.",
+      "html": "<button class=\"ds-btn\">See what you get</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border:0;border-radius:99px;background:#FFF8EF;color:#0E0D0C;font:600 15px/1 \"Funnel Sans\",system-ui,sans-serif;cursor:pointer;transition:transform .2s cubic-bezier(.16,1,.3,1)} .ds-btn:hover{transform:translateY(-1px)} .ds-btn:active{transform:translateY(1px)} .ds-btn:focus-visible{outline:2px solid currentColor;outline-offset:3px}"
+    },
+    {
+      "name": "Feed Button",
+      "kind": "button",
+      "refersTo": "button-feed",
+      "description": "Tangerine pill that starts or restarts a run (Feed him, Regenerate).",
+      "html": "<button class=\"ds-btn-feed\">Feed him</button>",
+      "css": ".ds-btn-feed{display:inline-flex;align-items:center;min-height:58px;padding:0 44px;border:0;border-radius:99px;background:#F58545;color:#0E0D0C;font:600 17px/1 \"Funnel Sans\",system-ui,sans-serif;cursor:pointer;transition:transform .2s cubic-bezier(.16,1,.3,1)} .ds-btn-feed:hover{transform:translateY(-1px)} .ds-btn-feed:active{transform:translateY(1px)} .ds-btn-feed:focus-visible{outline:2px solid #FFF8EF;outline-offset:3px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Inset currentColor ring; takes the field ink.",
+      "html": "<button class=\"ds-btn-ghost\">Find my rivals</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border:0;border-radius:99px;background:transparent;color:#FFF8EF;box-shadow:inset 0 0 0 1.5px currentColor;font:600 15px/1 \"Funnel Sans\",system-ui,sans-serif;cursor:pointer;transition:transform .2s cubic-bezier(.16,1,.3,1)} .ds-btn-ghost:hover{transform:translateY(-1px)} .ds-btn-ghost:focus-visible{outline:2px solid currentColor;outline-offset:3px}"
+    },
+    {
+      "name": "Sentence Blank",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "The Feed form as a sentence: blanks inherit the display face, underline turns tangerine on focus.",
+      "html": "<p class=\"ds-madlib\">I run <input class=\"ds-blank\" placeholder=\"brand name\" size=\"10\">.</p>",
+      "css": ".ds-madlib{font:500 40px/1.42 \"Bricolage Grotesque\",system-ui,sans-serif;font-variation-settings:\"opsz\" 60,\"wdth\" 92;letter-spacing:-.02em;color:#FFF8EF;background:#0E0D0C;padding:16px;margin:0} .ds-blank{font:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:#FFF8EF;background:transparent;border:0;border-bottom:2px solid rgba(255,248,239,.26);border-radius:0;padding:0 2px;transition:border-color .2s} .ds-blank::placeholder{color:rgba(255,248,239,.3)} .ds-blank:focus{outline:none;border-bottom-color:#F58545}"
+    },
+    {
+      "name": "Chapter Rail",
+      "kind": "nav",
+      "refersTo": "chapter-rail-link-active",
+      "description": "Sticky pill rail of chapters; the active chapter fills paper.",
+      "html": "<nav class=\"ds-rail\"><a class=\"on\" href=\"#\">Verdict</a><a href=\"#\">Loudest</a><a href=\"#\">The map</a><a href=\"#\">Audiences</a></nav>",
+      "css": ".ds-rail{display:flex;gap:2px;padding:8px 12px;background:rgba(14,13,12,.92);border-bottom:1px solid rgba(255,248,239,.14)} .ds-rail a{padding:8px 13px;border-radius:99px;font:500 14px \"Funnel Sans\",system-ui,sans-serif;color:#A39A8E;text-decoration:none;transition:background .25s,color .25s} .ds-rail a:hover{color:#FFF8EF} .ds-rail a.on{background:#FFF8EF;color:#0E0D0C} .ds-rail a:focus-visible{outline:2px solid currentColor;outline-offset:3px}"
+    },
+    {
+      "name": "Status Chips",
+      "kind": "chip",
+      "refersTo": "status-open",
+      "description": "Audience status; only \"open\" is yellow.",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-status\">crowded</span> <span class=\"ds-status ds-open\">open</span></div>",
+      "css": ".ds-chips{background:#9FE6C5;padding:16px} .ds-status{display:inline-block;font:600 12px \"Funnel Sans\",system-ui,sans-serif;padding:5px 10px;border-radius:99px;border:1.5px solid currentColor;color:#0E0D0C} .ds-open{background:#FFC24B;border-color:#FFC24B}"
+    },
+    {
+      "name": "Finding on a Field",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "A chapter: one field, one condensed finding, open space highlighted in yellow.",
+      "html": "<section class=\"ds-ch\"><h2 class=\"ds-find\">Nobody owns <span class=\"ds-ow\">the premium corner</span> yet.</h2><p class=\"ds-sub\">Rivals lean on offer and pain point.</p></section>",
+      "css": ".ds-ch{background:#F58545;color:#0E0D0C;padding:48px 24px} .ds-find{font:800 72px/.9 \"Bricolage Grotesque\",system-ui,sans-serif;font-variation-settings:\"opsz\" 96,\"wdth\" 80;letter-spacing:-.035em;text-wrap:balance;margin:0 0 18px} .ds-ow{background:#FFC24B;color:#0E0D0C;padding:0 .12em;border-radius:.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone} .ds-sub{font:400 18px/1.5 \"Funnel Sans\",system-ui,sans-serif;color:color-mix(in srgb,#0E0D0C 74%,#F58545);max-width:62ch;margin:0}"
+    },
+    {
+      "name": "Audience Rows",
+      "kind": "card",
+      "refersTo": "",
+      "description": "Inferred rows dashed, founder-edited rows solid; the target inverts to night.",
+      "html": "<div class=\"ds-aud\"><div class=\"ds-row\"><h3>Acne fighters <span class=\"ds-st\">contested</span></h3></div><div class=\"ds-row ds-t\"><h3>New mums <span class=\"ds-st ds-op\">open</span></h3></div></div>",
+      "css": ".ds-aud{background:#9FE6C5;color:#0E0D0C;padding:20px;display:grid;gap:12px} .ds-row{padding:18px 20px;border-radius:18px;border:1.5px dashed color-mix(in srgb,#0E0D0C 45%,transparent)} .ds-row h3{margin:0;font:800 30px/.95 \"Bricolage Grotesque\",system-ui,sans-serif;font-variation-settings:\"opsz\" 72,\"wdth\" 85;letter-spacing:-.025em} .ds-t{background:#0E0D0C;color:#FFF8EF;border-color:#0E0D0C} .ds-st{display:inline-block;vertical-align:middle;font:600 12px \"Funnel Sans\",system-ui,sans-serif;padding:5px 10px;border-radius:99px;border:1.5px solid currentColor;letter-spacing:0} .ds-op{background:#FFC24B;border-color:#FFC24B;color:#0E0D0C}"
+    },
+    {
+      "name": "Variant Card",
+      "kind": "card",
+      "refersTo": "card-variant",
+      "description": "A generated ad: lowercase angle title, colour creative tile, mint placeholders.",
+      "html": "<article class=\"ds-card\"><h3>social proof</h3><div class=\"ds-cr\"><span><mark>[4.8★]</mark> from <mark>[N]</mark> real customers.</span></div><p>Brackets are yours to fill.</p></article>",
+      "css": ".ds-card{background:#171513;border:1px solid rgba(255,248,239,.14);border-radius:20px;padding:18px;color:#FFF8EF;max-width:320px} .ds-card h3{margin:0 0 14px;font:800 34px/.9 \"Bricolage Grotesque\",system-ui,sans-serif;font-variation-settings:\"opsz\" 72,\"wdth\" 82;letter-spacing:-.025em} .ds-cr{aspect-ratio:1/1;border-radius:12px;background:#C21F6B;display:flex;align-items:flex-end;padding:16px;font:800 26px/.95 \"Bricolage Grotesque\",system-ui,sans-serif;font-variation-settings:\"opsz\" 72,\"wdth\" 85;margin-bottom:12px} .ds-card mark{background:#9FE6C5;color:#0E0D0C;border-radius:3px;padding:0 2px} .ds-card p{margin:0;font:400 14px/1.5 \"Funnel Sans\",system-ui,sans-serif;color:#D9D0C3}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Year-in-Review of Your Niche",
+    "overview": "metacrok tells a founder's competitive landscape the way a streaming service tells you your year: one finding per screen, each on its own drenched colour field, stated in enormous condensed type, with the data that proves it underneath. The ground is near-black night; the story moves through tangerine, magenta, violet, mint and cobalt fields, and one colour, a warm yellow, is held back to mean exactly one thing: space nobody owns.\n\nThe system is typographic first. Bricolage Grotesque, pushed narrow on its width axis and large on its optical-size axis, carries every finding as a punchline that fills the field edge to edge. Funnel Sans does the explaining at reading size; Spline Sans Mono appears only where a value is counted. Charts are honest about their sources: what was observed is drawn solid, what the AI inferred is drawn dashed. The gator mascot supplies the play; the data drawing supplies the seriousness.\n\nThe world explicitly refuses the category default: a sidebar dashboard of KPI cards and charts on white. There is no sidebar, no white app canvas, no grid of metric tiles. Density lives inside a chapter, never across the page.",
+    "keyCharacteristics": [
+      "Full-bleed colour chapters on a night ground, one finding each.",
+      "Condensed display type at poster scale; text in Funnel Sans; numbers in mono.",
+      "Yellow is reserved for open space; mint marks blanks the founder fills.",
+      "Observed data solid, AI inference dashed.",
+      "Pills and soft rounded panels; no hard edges, no hard shadows.",
+      "One authored motion moment per surface."
+    ],
+    "rules": [
+      {
+        "name": "The Yellow Means Open Rule",
+        "body": "`open` marks space nobody owns and nothing else: no buttons, no warnings, no decoration. If a yellow element does not point at an opportunity, it is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mint Blank Rule",
+        "body": "Bracketed placeholders in generated copy (ratings, counts, offers the founder must supply) are highlighted in mint, never yellow. A blank is the founder's to fill; it is not open space.",
+        "section": "colors"
+      },
+      {
+        "name": "The Identity Order Rule",
+        "body": "Competitors take identity colours in input order: rival one tangerine, rival two pink, rival three cobalt. The founder is always ink (night squares, night dots, night rings). On the dot matrix rival dots take the chapter ink and the founder's columns take night on a lifted column.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Field, One Finding Rule",
+        "body": "Each chapter owns exactly one field colour, and its ink flips (night on tangerine and mint, paper on magenta, violet and cobalt). Never set two fields side by side inside one chapter.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono Counts Rule",
+        "body": "Spline Sans Mono is for values that are counted or measured. It never sets a heading or a sentence.",
+        "section": "typography"
+      },
+      {
+        "name": "The Condensed Punchline Rule",
+        "body": "Findings are always Bricolage at weight 800 with a narrow width axis (75–85) and negative tracking (-0.025 to -0.04em). Never set a finding in Funnel Sans, and never at body size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Field Rule",
+        "body": "Nothing inside a chapter field casts a shadow. If a surface needs separation inside a field, change its colour (night panel on mint, paper map card on violet).",
+        "section": "elevation"
+      },
+      {
+        "name": "The Dashed Is Inferred Rule",
+        "body": "A dashed stroke means the AI inferred it: estimated map positions (dash 3 2, night stroke), the dashed legend chip, and inferred audience rows (1.5px dashed border). Once the founder edits audiences, the rows go solid. Observed data is never dashed.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do give each chapter one full-bleed field and one finding at headline scale, with its ink flipped to suit the field.",
+      "Do use `max(var(--g), (100% - 1240px) / 2)` for chapter and section padding so every child shares one left edge.",
+      "Do reserve yellow (`#FFC24B`) for open space: open words, the open quadrant, \"open\" audiences, \"only you\" angles.",
+      "Do highlight placeholders in mint, with night ink.",
+      "Do draw AI-inferred data dashed and observed data solid, and say so in the legend.",
+      "Do keep competitor identity in input order (tangerine, pink, cobalt) and the founder in night.",
+      "Do set every counted value in Spline Sans Mono with tabular figures.",
+      "Do limit each surface to one authored motion moment (landing headline rise; Chew field colour and word fill), start it from a visible state, and honour reduced motion."
+    ],
+    "donts": [
+      "Don't build a sidebar dashboard of KPI cards and charts on a white canvas; that is the category default this world refuses.",
+      "Don't use yellow for buttons, warnings, decoration or placeholders.",
+      "Don't set kickers or eyebrows above headings; the finding is the first line. Format and stage information live in tags and labels after the heading.",
+      "Don't put shadows inside chapter fields or use hard offset shadows anywhere.",
+      "Don't show the cost readout to founders; it is a developer tool behind `?dev=1`.",
+      "Don't set headings in mono or Funnel Sans, or numbers in Bricolage.",
+      "Don't animate an entrance from invisible; a throttled or skipped animation must still leave the content on screen."
+    ]
+  }
+}

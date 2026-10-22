@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS run_logs_run_idx ON run_logs (run_id, id)
