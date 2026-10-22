@@ -14,7 +14,9 @@ a{color:inherit;text-underline-offset:.18em}
 a:hover{color:#FFD23A}
 img{display:block;max-width:100%}
 ::selection{background:#F7862A;color:#0B192C}
-@media (max-width:700px){.hud-row{position:static!important}}
+@media (max-width:700px){.nav-sec,.hud-row{display:none!important}}
+@media (max-width:480px){.nav-cta{padding:0 14px!important;min-height:40px!important;font-size:14px!important}.hero-cta{flex-wrap:nowrap!important;gap:8px!important}.hero-cta a{flex:1 1 0;justify-content:center;padding:0 10px!important;min-height:48px!important;font-size:15px!important;white-space:nowrap}}
+@media (max-width:340px){.nav-docs{display:none!important}}
 </style>
 </head>
 <body>
@@ -25,11 +27,11 @@ img{display:block;max-width:100%}
 
   <nav style="position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px max(20px,4vw,calc((100% - 1240px) / 2));pointer-events:none">
     <a href="#" style="pointer-events:auto;display:block"><img src="assets/logo-white.png" alt="metacrok" style="height:30px;width:auto"></a>
-    <div style="display:flex;align-items:center;gap:28px;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end">
-      <a href="#story" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">What you get</a>
-      <a href="#how" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">How it works</a>
-      <a href="/docs" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">Docs</a>
-      <a href="/app" style="display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 15px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 4px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 6px 0 #0B192C;color:#0B192C">Feed the croc</a>
+    <div style="display:flex;align-items:center;gap:clamp(14px,3vw,28px);pointer-events:auto;justify-content:flex-end">
+      <a class="nav-sec" href="#story" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">What you get</a>
+      <a class="nav-sec" href="#how" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">How it works</a>
+      <a class="nav-docs" href="/docs" style="font:600 15px 'Funnel Sans',sans-serif;text-decoration:none;color:#F5F8FC">Docs</a>
+      <a class="nav-cta" href="/app" style="white-space:nowrap;display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 15px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 4px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 6px 0 #0B192C;color:#0B192C">Feed the croc</a>
     </div>
   </nav>
 
@@ -47,12 +49,12 @@ img{display:block;max-width:100%}
   
 
   <div style="position:relative;z-index:1;padding:clamp(12px,3vh,40px) max(20px,4vw,calc((100% - 1240px) / 2)) 0;pointer-events:none">
-    <h1 style="font:800 clamp(44px,min(7.2vw,9.5vh),120px)/.9 'Oxanium',sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:#F5F8FC;text-shadow:0 .05em 0 #0B192C;max-width:12ch">
+    <h1 style="font:800 clamp(44px,min(7.2vw,9.5vh),120px)/.9 'Oxanium',sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:#F5F8FC;text-shadow:0 .05em 0 #0B192C,2px 2px 0 #0B192C,-2px 2px 0 #0B192C,2px -2px 0 #0B192C,-2px -2px 0 #0B192C;max-width:12ch">
       <span style="display:block">Eats ads.</span>
       <span style="display:block">Spits out better ones.</span>
     </h1>
     <p style="margin-top:20px;max-width:46ch;font:500 clamp(16px,1.5vw,19px)/1.5 'Funnel Sans',sans-serif;color:#F5F8FC;background:rgba(11,25,44,.82);padding:14px 18px;border-radius:8px">Name your rivals. Metacrok reads their live Meta ads and your Instagram, maps where they all crowd, and writes three ads for the space nobody owns. For solo D2C founders, in about 90 seconds.</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;pointer-events:auto">
+    <div class="hero-cta" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;pointer-events:auto">
       <a href="/app" style="display:inline-flex;align-items:center;min-height:54px;padding:0 28px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 5px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 7px 0 #0B192C;color:#0B192C">Feed the croc</a>
       <a href="#story" style="display:inline-flex;align-items:center;min-height:54px;padding:0 26px;border-radius:8px;background:#0B192C;color:#F5F8FC;font:600 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:inset 0 0 0 2px #37B7C3,0 5px 0 rgba(11,25,44,.6)" style-hover="transform:translateY(-2px);color:#F5F8FC">See what you get</a>
     </div>
