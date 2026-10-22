@@ -8,7 +8,7 @@ export const methods = ['GET'];
 
 function totalCost(cost) {
   let t = 0;
-  for (const k of ['brand', 'pull', 'analysis', 'synthesis', 'generation', 'tweaks']) t += Number(cost && cost[k] && cost[k].usd) || 0;
+  for (const k of ['brand', 'rivals', 'pull', 'analysis', 'synthesis', 'generation', 'tweaks']) t += Number(cost && cost[k] && cost[k].usd) || 0;
   return Math.round(t * 1e5) / 1e5;
 }
 

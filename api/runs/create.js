@@ -9,7 +9,17 @@ export const methods = ['POST'];
 const GOALS = ['cold traffic', 'retargeting', 'product launch', 'sale or offer'];
 const COUNTRIES = ['IN', 'US', 'GB', 'AE', 'AU', 'CA', 'SG', 'ALL'];
 
+// "their" Instagram handle or website, kept only to recognise their Ad Library page (never to pull their posts)
+function hintOf(h) {
+  const t = str(h, 120);
+  const ig = igHandle(t) || (/^@/.test(t) ? t.slice(1).toLowerCase() : null);
+  const site = (t.match(/^(?:https?:\/\/)?(?:www\.)?([a-z0-9-]{3,}(?:\.[a-z0-9-]+)*\.[a-z]{2,})(?:[\/?#]|$)/i) || [])[1];
+  return { hint_ig: ig, site: site ? site.toLowerCase() : null };
+}
+
 function parseCompetitor(raw) {
+  const hint = raw && typeof raw === 'object' ? hintOf(raw.hint) : {};
+  if (raw && typeof raw === 'object') raw = raw.name;
   let s = str(raw, 200);
   if (!s) return null;
   let name = s;
@@ -19,7 +29,7 @@ function parseCompetitor(raw) {
   else if (ig) name = ig[1];
   name = name.replace(/^@/, '').replace(/^https?:\/\/(www\.)?/, '').replace(/\.(com|in|co|store|shop)(\/.*)?$/i, '').trim();
   if (!name) return null;
-  return { name: name.slice(0, 60), input: ig ? name : s, ig: igHandle(s) }; // ig: also pull their organic posts
+  return { name: name.slice(0, 60), input: ig ? name : s, ig: igHandle(s), ...hint }; // ig: also pull their organic posts
 }
 
 export default async function (req, res) {
@@ -40,8 +50,9 @@ export default async function (req, res) {
   const notes = str(b.notes, 400);
 
   const ipHash = await hashIp(clientIp(req));
-  if (!(await rateLimit('run:' + ipHash, 12, 60))) {
-    return res.status(429).json({ error: 'The gator is full. 12 runs an hour per person; try again shortly.' });
+  const perHour = Number(process.env.RUNS_PER_HOUR) || 12; // each run costs real money: keep it low in production
+  if (!(await rateLimit('run:' + ipHash, perHour, 60))) {
+    return res.status(429).json({ error: 'The gator is full. ' + perHour + ' runs an hour per person; try again shortly.' });
   }
 
   const id = newId(10);

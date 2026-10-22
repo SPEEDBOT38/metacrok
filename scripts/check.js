@@ -111,5 +111,36 @@ assert.equal(guardVariant({ primary_text: 'Glow like never before.' }, ctxR).fla
 assert.equal(guardVariant({ primary_text: 'Skin that holds its glow all day.' }, ctxR).flagged.length, 0);
 assert.equal(guardVariant({ primary_text: 'Say goodbye to dull, dry skin instantly' }, { ...ctxR, source: 'say goodbye to dull, dry skin instantly' }).flagged.length, 0); // founder's own words win
 assert.equal(phraseSet(['one two']).size, 0);
+
+// ---- rivals: a named competitor is matched to ITS page or reported missing, never swapped for another brand ----
+import { assignToCompetitors, pageScore } from '../lib/apify.js';
+const ad = (n, pid, pname, uri, link) => ({ ad_archive_id: String(n), page_id: pid, page_name: pname, snapshot: { page_profile_uri: uri || '', link_url: link || '', body: { text: 'b' + n }, images: [{ original_image_url: 'https://x/' + n + '.jpg' }] } });
+const pool = [
+  ...[1, 2, 3].map(n => ad(n, 'p1', 'Dot & Key', 'https://www.facebook.com/dotandkey')),
+  ...[4, 5].map(n => ad(n, 'p3', 'Dr Sheths', 'https://www.facebook.com/drsheths')),
+  ...[10, 11, 12, 13, 14, 15, 16, 17].map(n => ad(n, 'p9', 'Cheap Reseller Hub', 'https://www.facebook.com/resellerhub')), // dominates the search results
+  ...[20, 21].map(n => ad(n, 'p5', 'Plum Goodness', 'https://www.facebook.com/plumgoodness')),
+];
+const rv = assignToCompetitors(pool, [{ name: 'Dot & Key' }, { name: "Dr. Sheth's" }, { name: 'Foxtale' }, { name: 'Plum' }, { name: 'DK', hint_ig: 'dotandkey' }, { name: 'Dot' }]);
+assert.equal(rv['Dot & Key'].page_id, 'p1'); assert.equal(rv['Dot & Key'].ads.length, 3);
+assert.equal(rv["Dr. Sheth's"].page_id, 'p3', 'punctuation does not hide a page');
+assert.equal(rv['Foxtale'].resolution, 'not found'); assert.equal(rv['Foxtale'].ads.length, 0, 'the dominant look-alike is NOT used instead');
+assert.ok(rv['Foxtale'].candidates.includes('Cheap Reseller Hub'), 'what the search did return is reported');
+assert.equal(rv['Plum'].page_name, 'Plum Goodness', 'a short name finds the longer page');
+assert.equal(rv['DK'].page_id, 'p1', 'an Instagram/website hint recognises the page when the name cannot');
+assert.equal(rv['Dot'].resolution, 'not found', 'a 3-letter name is too weak to claim a page on its own');
+assert.equal(pageScore({ page_name: 'Anything', page_uri: '' }, { name: '' }), 0);
+// the website is the best evidence: the page whose ads LINK to the rival's site is the rival, whatever it is called
+const web = [
+  ...[30, 31, 32].map(n => ad(n, 'w1', 'Plum', 'https://www.facebook.com/plum', 'https://plumgoodness.com/products/' + n)),
+  ...[40, 41].map(n => ad(n, 'w2', 'Totally Different Name', 'https://www.facebook.com/tdn', 'https://xyzbeauty.in/p/' + n)),
+  ...[50, 51, 52, 53, 54].map(n => ad(n, 'w3', 'Cheap Reseller Hub', 'https://www.facebook.com/hub', 'https://reseller.example/' + n)),
+];
+const wr = assignToCompetitors(web, [{ name: 'Plum Goodness', site: 'plumgoodness.com' }, { name: 'Xyz Beauty', site: 'xyzbeauty.in' }, { name: 'Nope Brand', site: 'nopebrand.com' }]);
+assert.equal(wr['Plum Goodness'].page_id, 'w1');
+assert.equal(wr['Xyz Beauty'].page_id, 'w2', 'matched by where its ads link, not by what the page is called');
+assert.equal(wr['Nope Brand'].resolution, 'not found', 'a wrong website guess fails safe');
+assert.equal(wr['Nope Brand'].ads.length, 0);
+assert.ok(!wr['Nope Brand'].candidates.includes('Plum') && !wr['Nope Brand'].candidates.includes('Totally Different Name'), 'rivals we did find are not listed as what the search "turned up"');
 console.log('claims ok');
 process.exit(0); // pipeline import opens the db

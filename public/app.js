@@ -48,6 +48,9 @@
     else { el.className = 'mode seed'; $('span', el).textContent = 'demo seed'; el.title = 'Live pull off (' + (s.live_reason || 'not connected') + '): runs use the demo seed'; }
   }).catch(() => { $('#pull-mode').hidden = true; });
 
+  // retyping a picked rival makes it the founder's own entry: it no longer carries the suggestion's hint
+  $$('.f-comp').forEach(i => i.addEventListener('input', () => { if (i.dataset.sug && i.value.trim() !== i.dataset.sug) { delete i.dataset.sug; delete i.dataset.hint; $$('.sug[aria-pressed="true"]').forEach(b => { if (!$$('.f-comp').some(x => x.dataset.sug === b.dataset.label)) b.setAttribute('aria-pressed', 'false'); }); } }));
+
   // the blanks in the sentence grow with what's typed (field-sizing where supported, size= elsewhere)
   if (!CSS.supports('field-sizing', 'content')) {
     $$('.blank input').forEach(i => { const f = () => { i.size = Math.max(4, (i.value || i.placeholder).length); }; i.addEventListener('input', f); f(); });
@@ -74,14 +77,21 @@
     try {
       const r = await api('/suggest', { body: { brand_name: name, brand_url: url, country: $('#f-country').value } });
       box.innerHTML = '<p class="hint">Niche: <b>' + esc(r.niche || 'your category') + '</b>. Pick up to 3.</p>' +
-        r.competitors.map(c => '<button type="button" class="sug" aria-pressed="false" data-label="' + esc(c.name) + '">' +
+        r.competitors.map(c => '<button type="button" class="sug" aria-pressed="false" data-label="' + esc(c.name) + '" data-hint="' + esc(c.instagram || c.website || '') + '">' +
           '<span class="tick">✓</span><span><b>' + esc(c.name) + '</b> <span class="mono">' + esc(c.instagram || c.website || '') + '</span><small>' + esc(c.why) + '</small></span></button>').join('');
       $$('.sug', box).forEach(b => b.addEventListener('click', () => {
         const on = b.getAttribute('aria-pressed') === 'true';
-        if (!on && $$('.sug[aria-pressed="true"]', box).length >= 3) { toast('Three is the limit. Unpick one first.'); return; }
-        b.setAttribute('aria-pressed', String(!on));
-        const names = $$('.sug[aria-pressed="true"]', box).map(x => x.dataset.label);
-        $$('.f-comp').forEach((inp, k) => { inp.value = names[k] || ''; });
+        const mine = $$('.f-comp').find(i => i.dataset.sug === b.dataset.label);
+        if (on) { // unpick: clear only the box this suggestion filled
+          if (mine) { mine.value = ''; delete mine.dataset.sug; delete mine.dataset.hint; mine.dispatchEvent(new Event('input', { bubbles: true })); }
+          b.setAttribute('aria-pressed', 'false');
+          return;
+        }
+        const free = $$('.f-comp').find(i => !i.value.trim());
+        if (!free) { toast('All three boxes are full. Clear one first.'); return; }
+        free.value = b.dataset.label; free.dataset.sug = b.dataset.label; free.dataset.hint = b.dataset.hint || '';
+        free.dispatchEvent(new Event('input', { bubbles: true }));
+        b.setAttribute('aria-pressed', 'true');
       }));
     } catch (e) {
       box.innerHTML = '<p class="err">' + esc(e.message) + '</p>';
@@ -95,7 +105,7 @@
       brand_name: $('#f-name').value.trim(),
       brand_url: $('#f-url').value.trim(),
       brand_ig: $('#f-ig').value.trim(),
-      competitors: $$('.f-comp').map(i => i.value.trim()).filter(Boolean),
+      competitors: $$('.f-comp').map(i => ({ name: i.value.trim(), hint: i.dataset.hint || '' })).filter(c => c.name),
       goal: ($('input[name="goal"]:checked') || {}).value,
       notes: $('#f-notes').value.trim(),
       country: $('#f-country').value,
@@ -260,6 +270,18 @@
     $('#run-error-msg').textContent = msg;
     clearInterval(S.clockT);
   }
+  function rebuildPayload() {
+    const r = S.run;
+    return lastPayload ? { ...lastPayload } : (r && {
+      brand_name: r.input.brand.name, brand_url: r.input.brand.url, brand_ig: r.input.brand.ig || '',
+      competitors: r.input.competitors.map(c => ({ name: c.input || c.name, hint: c.hint_ig ? '@' + c.hint_ig : (c.site ? c.site + '.com' : '') })),
+      goal: r.input.goal, notes: r.input.notes, country: r.input.country, mode: 'auto',
+    }) || {};
+  }
+  $('#btn-retry-live').addEventListener('click', async () => {
+    const p = rebuildPayload(); p.mode = 'auto';
+    try { await startRun(p); } catch (e) { toast(e.message); }
+  });
   $('#btn-retry-demo').addEventListener('click', async () => {
     const r = S.run;
     const p = lastPayload || (r && {
@@ -360,6 +382,13 @@
       elapsed(r).toFixed(0) + 's',
       usd((r.cost || {}).total_usd, 3),
     ].filter(Boolean).map(s => '<span>' + esc(s) + '</span>').join('');
+    // who we matched: each rival and the page its ads came from; a rival we couldn't find is said out loud
+    const nrm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const live = (r.competitors || []).filter(c => c.source === 'live');
+    $('#match-note').hidden = !live.length;
+    $('#match-note').innerHTML = live.map(c => c.ads_kept
+      ? '<p><b>' + esc(c.name) + '</b> · ' + c.ads_kept + ' ads' + (c.page_name && nrm(c.page_name) !== nrm(c.name) ? ' from the page “' + esc(c.page_name) + '”' : '') + '</p>'
+      : '<p class="miss"><b>' + esc(c.name) + '</b> · no active Meta ads found, so it is not in this analysis.' + ((c.candidates || []).length ? ' The search only turned up ' + esc(c.candidates.join(', ')) + ', ' + ((c.candidates || []).length === 1 ? 'which is' : 'which are') + ' not the same brand.' : '') + ' Paste its Facebook page link in place of its name to include it.</p>').join('');
     const note = $('#seed-note');
     if (r.source && r.source !== 'live') {
       note.hidden = false;

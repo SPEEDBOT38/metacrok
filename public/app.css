@@ -63,7 +63,7 @@
 .check b{color:var(--paper);font-weight:600}
 .feed-bar{position:sticky;bottom:0;z-index:5;margin:28px -16px 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--night) 30%);display:flex;flex-direction:column;gap:6px}
 .feed-go{width:100%;min-height:58px;font-size:17px;background:var(--tangerine)}
-.feed-gator{position:absolute;right:-30px;top:110px;width:160px;opacity:.95;transform:rotate(-6deg)}
+.feed-gator{display:none} /* on phones it sat on top of the intro text */
 
 /* ---------- CHEW: the stage is a colour field ---------- */
 .run{padding:0}
@@ -129,6 +129,9 @@ html{scroll-padding-top:118px}
 .ch-verdict .find{font-size:clamp(56px,14vw,168px)} /* a punchline: it fills the field */
 .ch-sub{font-size:clamp(16px,1.6vw,19px);line-height:1.5;color:var(--quiet);max-width:62ch;margin-bottom:34px}
 .facts{font-size:13px;color:var(--quiet);display:flex;flex-wrap:wrap;gap:6px 18px}
+.match-note{margin-top:22px;display:grid;gap:4px;font-size:14px;max-width:70ch}
+.match-note p{margin:0}
+.match-note .miss{padding:10px 12px;border-radius:10px;background:rgba(14,13,12,.14)}
 .seed-note{margin-top:22px;padding:14px 16px;border-radius:var(--r);background:rgba(14,13,12,.12);font-size:14px;max-width:70ch}
 .open-word{background:var(--open);color:var(--night);padding:0 .12em;border-radius:.08em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 
@@ -323,6 +326,7 @@ mark{background:var(--mint);color:var(--night);border-radius:3px;padding:0 2px} 
   .steps li:not([aria-current]):not(:first-child){display:list-item}
   .mode span{display:inline}
   .feed{padding:40px 24px 64px}
+  .feed-gator{display:block;position:absolute;right:24px;top:40px;width:150px;transform:rotate(-6deg)}
   .feed-bar{margin:28px -24px 0;padding-left:24px;padding-right:24px}
   .settings{grid-template-columns:240px 1fr;align-items:end}
   .ads{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -342,7 +346,7 @@ mark{background:var(--mint);color:var(--night);border-radius:3px;padding:0 2px} 
   .feed{padding:56px 4vw 80px}
   .feed-bar{position:static;margin:36px 0 0;padding:0;background:none;flex-direction:row-reverse;justify-content:flex-end;align-items:center;gap:18px}
   .feed-go{width:auto;padding:0 44px}
-  .feed-gator{right:4vw;top:60px;width:240px}
+  .feed-gator{display:block;position:absolute;right:4vw;top:60px;width:240px;transform:rotate(-6deg)}
   .scene{padding:26px 4vw 40px;display:grid;grid-template-columns:1fr minmax(240px,340px);grid-template-areas:"bar bar" "title title" "meter gator" "log gator";align-content:start;column-gap:4vw}
   .run-bar{grid-area:bar}.sc-title{grid-area:title}.sc-meter{grid-area:meter;align-self:end}.gen-log{grid-area:log}
   .sc-gator{grid-area:gator;align-self:end;margin:0;width:100%}
