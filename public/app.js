@@ -1,799 +1,578 @@
-/* metacrok app — 1 FEED -> 2 CHEW -> 3 FRESH OUT */
+/* metacrok app: FEED -> CHEW -> FRESH OUT (croc design) */
 (function () {
   'use strict';
-  const API = (window.__HATCHABLE__ && window.__HATCHABLE__.api) || '/api';
+  const API = '/api';
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let shownSearch = location.search; // the run on screen; a hash-only change (subnav anchors) must not reload
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const marks = (s) => esc(s).replace(/\[([^\]]{1,60})\]/g, '<mark title="fill this in">[$1]</mark>');
-  const usd = (n, d = 4) => '$' + (Number(n) || 0).toFixed(d);
-  const DEV = /[?&]dev=1/.test(location.search) || (() => { try { return localStorage.getItem('metacrok-dev') === '1'; } catch (_) { return false; } })();
+  const ph = (s) => esc(s).replace(/\[([^\]]{1,60})\]/g, '<mark class="ph" title="fill this in">[$1]</mark>');
+  const usd = (n, d = 3) => '$' + (Number(n) || 0).toFixed(d);
+  const cap = (s) => { const t = String(s || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const listJoin = (a) => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  const r2 = (n) => (Math.round(n * 100) / 100).toFixed(2);
+  const isKnown = (s) => s && !/^(unknown|n\/a|none)$/i.test(String(s).trim());
+  const firstSentence = (s, max) => { const t = String(s || '').trim(); const m = t.match(/^.+?[.!?](?=\s|$)/); const f = m ? m[0] : t; max = max || 160; return f.length > max ? f.slice(0, max).replace(/\s+\S*$/, '') + '…' : f; };
+  const root = $('#root');
 
   async function api(path, opts) {
     const o = opts || {};
-    const res = await fetch(API + path, {
-      method: o.body ? 'POST' : 'GET',
-      headers: o.body ? { 'content-type': 'application/json' } : {},
-      body: o.body ? JSON.stringify(o.body) : undefined,
-    });
-    let j = null;
-    try { j = await res.json(); } catch (_) {}
+    const res = await fetch(API + path, { method: o.body ? 'POST' : 'GET', headers: o.body ? { 'content-type': 'application/json' } : {}, body: o.body ? JSON.stringify(o.body) : undefined });
+    let j = null; try { j = await res.json(); } catch (_) {}
     if (!res.ok) { const e = new Error((j && j.error) || ('Request failed (' + res.status + ')')); e.status = res.status; throw e; }
     return j;
   }
-
-  function toast(msg) {
-    const t = $('#toast'); t.textContent = msg; t.classList.add('on');
-    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2400);
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2200); }
+  async function copy(txt, msg) {
+    try { await navigator.clipboard.writeText(txt); } catch (_) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    toast(msg || 'Copied');
   }
 
-  /* ---- page + step indicator ---- */
-  const ORDER = ['feed', 'chew', 'fresh'];
-  function setStep(step) {
-    const at = ORDER.indexOf(step);
-    $$('.steps li').forEach((li, i) => {
-      if (i === at) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
-      li.classList.toggle('done', i < at);
-    });
-    document.title = { feed: 'Feed the gator', chew: 'Chewing…', fresh: 'Fresh out' }[step] + ' — metacrok';
-  }
+  const COLORS = ['#F7862A', '#B48CF0', '#37B7C3'];
+  const ART = ['#7C4BC8', '#B8532A', '#2170CA', '#1F7A6B', '#B0396A', '#4C5B9A'];
+  const GOALS = [['cold traffic', 'cold traffic'], ['retargeting', 'retargeting'], ['product launch', 'a launch'], ['sale or offer', 'a sale']];
+  const MARKETS = [['IN', 'India'], ['US', 'United States'], ['GB', 'United Kingdom'], ['AE', 'UAE'], ['AU', 'Australia'], ['CA', 'Canada'], ['SG', 'Singapore'], ['ALL', 'All markets']];
+  const STAGES = [
+    { k: 'brand', word: 'sniffing', desc: 'Reading your site and Instagram.' },
+    { k: 'pull', word: 'pulling', desc: 'Fetching your rivals’ live Meta ads.' },
+    { k: 'analyze', word: 'chewing', desc: 'Reading every ad: hook, angle, offer, audience.' },
+    { k: 'synthesize', word: 'digesting', desc: 'Mapping where they crowd and where nobody stands.' },
+    { k: 'generate', word: 'spitting', desc: 'Writing three ads for the open space.' },
+  ];
 
-  /* ================= PAGE 1 · FEED ================= */
+  /* ---------------- state ---------------- */
+  const F = { url: '', name: '', ig: '', rivals: [], rivalInput: '', showSuggest: false, sug: null, niche: '', goal: 'cold traffic', notes: '', market: 'IN', demo: false, error: '', busy: false };
+  const S = { screen: 'feed', id: null, run: null, ads: [], igPosts: [], angles: [], pending: 0, tab: 'you', sel: 0, mapSel: null, layers: { rival: true, post: true, new: true }, filter: 'All', since: 0, logs: [], done: false, tweak: '', lastPayload: null, clockT: null, versions: {} };
+
+  /* ---------------- header ---------------- */
+  function renderSteps() {
+    const items = [['feed', 'Feed'], ['chew', 'Chew'], ['results', 'Fresh out']];
+    $('#steps').innerHTML = items.map(([k, l], i) => {
+      const can = k === 'feed' || (k === 'chew' && S.id && S.screen === 'chew') || (k === 'results' && S.run && S.run.status === 'done');
+      return '<li><button class="step' + (S.screen === k ? ' on' : '') + '" data-act="go" data-k="' + k + '"' + (can ? '' : ' disabled') + '><span class="px8">' + (i + 1) + '</span>' + l + '</button></li>';
+    }).join('');
+    document.title = { feed: 'Feed the croc', chew: 'Chewing…', results: 'Fresh out' }[S.screen] + ' — metacrok';
+  }
   api('/status').then(s => {
     const el = $('#pull-mode');
-    if (s.live_pull) { el.className = 'mode live'; $('span', el).textContent = 'live ad library'; el.title = 'Live Meta Ad Library pull is on'; }
-    else { el.className = 'mode seed'; $('span', el).textContent = 'demo seed'; el.title = 'Live pull off (' + (s.live_reason || 'not connected') + '): runs use the demo seed'; }
+    if (s.live_pull) { el.className = 'live'; $('span', el).textContent = 'live ad library'; }
+    else { el.className = 'live seed'; $('span', el).textContent = 'demo only'; el.title = 'Live pull off (' + (s.live_reason || 'not connected') + '): runs use demo ads'; }
   }).catch(() => { $('#pull-mode').hidden = true; });
 
-  // retyping a picked rival makes it the founder's own entry: it no longer carries the suggestion's hint
-  $$('.f-comp').forEach(i => i.addEventListener('input', () => { if (i.dataset.sug && i.value.trim() !== i.dataset.sug) { delete i.dataset.sug; delete i.dataset.hint; $$('.sug[aria-pressed="true"]').forEach(b => { if (!$$('.f-comp').some(x => x.dataset.sug === b.dataset.label)) b.setAttribute('aria-pressed', 'false'); }); } }));
+  /* ================= FEED ================= */
+  const brandOf = () => F.name || (F.url ? F.url.replace(/^https?:\/\//, '').replace(/^www\./, '').split(/[./]/)[0] : '');
+  const goalText = () => (GOALS.find(g => g[0] === F.goal) || [0, F.goal])[1];
 
-  // the blanks in the sentence grow with what's typed (field-sizing where supported, size= elsewhere)
-  if (!CSS.supports('field-sizing', 'content')) {
-    $$('.blank input').forEach(i => { const f = () => { i.size = Math.max(4, (i.value || i.placeholder).length); }; i.addEventListener('input', f); f(); });
+  function feedHTML() {
+    const pill = (on) => on ? ' on' : '';
+    return '<main class="feed"><div class="col">' +
+      '<div><h1 class="big-h">feed the croc.</h1><p style="margin-top:16px;font-size:18px;color:var(--soft);max-width:48ch">Three quick answers. He reads your rivals’ live Meta ads, maps where they crowd, and writes three ads for the space nobody owns.</p></div>' +
+      '<section class="card"><div class="sec-n"><span class="px y">1-1</span><h2>your brand</h2></div>' +
+        '<label class="fld"><span>Website</span><input class="in" data-f="url" value="' + esc(F.url) + '" placeholder="yourstore.com" inputmode="url"></label>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">' +
+          '<label class="fld"><span>Brand name</span><input class="in" data-f="name" value="' + esc(F.name) + '" placeholder="We’ll read it from your site"></label>' +
+          '<label class="fld"><span>Instagram <span class="px8" style="color:var(--green);margin-left:4px">RECOMMENDED</span></span><input class="in" data-f="ig" value="' + esc(F.ig) + '" placeholder="@handle"></label></div>' +
+        '<p style="font-size:14px;color:var(--mute)">We read your last 12 posts to learn who you already talk to (your ICP) and how you sound. Without it we only use your site.</p></section>' +
+      '<section class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div class="sec-n"><span class="px y">1-2</span><h2>your rivals</h2></div><span class="px s" id="rival-count">' + F.rivals.length + '/3</span></div>' +
+        '<div class="row">' + F.rivals.map((r, i) => '<span class="chip"><i style="background:' + COLORS[i % 3] + '"></i>' + esc(r.name) + '<button data-act="rm-rival" data-i="' + i + '" aria-label="Remove ' + esc(r.name) + '">×</button></span>').join('') + '</div>' +
+        (F.rivals.length < 3 ? '<div style="display:flex;gap:8px"><input class="in" data-f="rivalInput" data-enter="add-rival" value="' + esc(F.rivalInput) + '" placeholder="Brand name, @handle or Facebook page link"><button class="btn mid" style="height:50px" data-act="add-rival">Add</button></div>' : '') +
+        '<button class="btn teal" style="align-self:flex-start" data-act="suggest"' + (F.sug === 'loading' ? ' disabled' : '') + '>' + (F.sug === 'loading' ? 'Sniffing around (about 20s)…' : 'Not sure? Find my rivals') + '</button>' +
+        (F.showSuggest ? '<div style="border:2px solid var(--line);border-radius:8px;overflow:hidden">' + (F.sug === 'loading' ? '<p class="sug m">Searching the web for D2C brands in your niche…</p>' :
+          F.sug && F.sug.error ? '<p class="sug err">' + esc(F.sug.error) + '</p>' :
+          (F.niche ? '<p class="sug m" style="font-size:13px">Niche: <b style="color:var(--paper)">' + esc(F.niche) + '</b>. Pick up to 3.</p>' : '') +
+          (F.sug || []).map((c, i) => { const on = F.rivals.some(r => r.name.toLowerCase() === c.name.toLowerCase()); return '<div class="sug"><div><b>' + esc(c.name) + '</b><small>' + esc([c.instagram || c.website, c.why].filter(Boolean).join(' · ')) + '</small></div><button class="btn sm" style="' + (on ? 'background:var(--line);color:var(--mute)' : 'background:var(--paper);color:var(--night)') + '" data-act="pick-sug" data-i="' + i + '">' + (on ? 'Added' : '+ Add') + '</button></div>'; }).join('')) + '</div>' : '') +
+      '</section>' +
+      '<section class="card"><div class="sec-n"><span class="px y">1-3</span><h2>the ads are for</h2></div>' +
+        '<div class="row" role="radiogroup">' + GOALS.map(([v, l]) => '<button class="pill' + pill(F.goal === v) + '" style="height:42px;padding:0 16px;font-size:15px" role="radio" aria-checked="' + (F.goal === v) + '" data-act="goal" data-v="' + v + '">' + l + '</button>').join('') + '</div>' +
+        '<label class="fld"><span>What makes your product different, and anything to avoid <span style="color:var(--mute);font-weight:400">optional</span></span><textarea class="in" data-f="notes" rows="2" maxlength="400" placeholder="10% niacinamide, fragrance-free · never discount · no emoji">' + esc(F.notes) + '</textarea></label>' +
+        '<label style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--soft)">Ad Library market <select class="in" data-f="market">' + MARKETS.map(([v, l]) => '<option value="' + v + '"' + (F.market === v ? ' selected' : '') + '>' + l + '</option>').join('') + '</select></label>' +
+      '</section></div>' +
+      '<aside class="aside"><div class="croc-box"><div class="croc-sky"><img id="croc-img" src="/assets/game/' + (F.rivals.length ? 'crocChompOpen' : 'crocRun1') + '.png" alt=""><div class="hud"><span class="px8 s" style="letter-spacing:1px">ON THE MENU</span><span class="y" style="font:14px \'Press Start 2P\',monospace" id="menu-count">' + F.rivals.length + ' RIVALS</span></div></div><div class="grass"></div>' +
+        '<div class="says"><p>I run <em id="sum-name"></em>. I’m up against <em id="sum-rivals"></em>. These ads are for <em id="sum-goal"></em>.</p><p style="font-size:14px;color:var(--mute)">About 90 seconds. Nothing is posted for you.</p></div></div>' +
+        (F.demo ? '<p class="dash" style="font-size:13px">Demo mode: fictional skincare rivals, no live pull. <button class="link" style="font-size:13px" data-act="live">Use live data</button></p>' : '') +
+        '<p class="err" id="feed-err">' + esc(F.error) + '</p>' +
+        '<button class="btn big" id="btn-feed" data-act="feed"' + (F.busy ? ' disabled' : '') + '>' + (F.busy ? 'opening wide…' : 'feed him →') + '</button>' +
+        '<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px;color:var(--mute)"><button class="link" data-act="demo">Fill with demo brands</button><span>No sign-up</span></div></aside></main>';
   }
-
-  const qs = new URLSearchParams(location.search);
-  if (qs.get('brand')) {
-    const b = qs.get('brand');
-    if (/\.|@/.test(b)) $('#f-url').value = b; else $('#f-name').value = b;
+  function feedSummary() {
+    const b = brandOf(), rv = F.rivals.map(r => r.name);
+    const set = (id, t) => { const e = $('#' + id); if (e) e.textContent = t; };
+    set('sum-name', b ? cap(b) : 'your brand');
+    set('sum-rivals', rv.length ? rv.join(rv.length > 2 ? ', ' : ' and ') : 'your rivals');
+    set('sum-goal', goalText());
+    set('menu-count', rv.length + ' RIVALS'); set('rival-count', rv.length + '/3');
+    const img = $('#croc-img'); if (img) img.src = '/assets/game/' + (rv.length ? 'crocChompOpen' : 'crocRun1') + '.png';
+    const btn = $('#btn-feed'); if (btn) btn.style.opacity = (F.url || F.name) && (rv.length || F.demo) ? 1 : 0.6;
   }
+  function showFeed() { S.screen = 'feed'; clearInterval(S.clockT); root.innerHTML = feedHTML(); feedSummary(); renderSteps(); window.scrollTo(0, 0); }
 
-  $('#btn-demo-names').addEventListener('click', () => {
-    ['glowritual', 'dewdrift', 'barebae'].forEach((n, k) => { $$('.f-comp')[k].value = n; });
-    toast('Demo brands loaded (fictional skincare pack)');
-  });
-
-  $('#btn-suggest').addEventListener('click', async () => {
-    const name = $('#f-name').value.trim(), url = $('#f-url').value.trim();
-    const box = $('#suggestions'), btn = $('#btn-suggest');
-    if (!name && !url) { $('#ob-error').textContent = 'Add your brand name or website first, so he knows whose rivals to sniff out.'; $('#f-name').focus(); return; }
-    $('#ob-error').textContent = '';
-    btn.disabled = true; btn.textContent = 'Sniffing around (≈20s)…';
-    box.hidden = false; box.innerHTML = '<p class="hint">Searching the web for D2C brands in your niche…</p>';
-    try {
-      const r = await api('/suggest', { body: { brand_name: name, brand_url: url, country: $('#f-country').value } });
-      box.innerHTML = '<p class="hint">Niche: <b>' + esc(r.niche || 'your category') + '</b>. Pick up to 3.</p>' +
-        r.competitors.map(c => '<button type="button" class="sug" aria-pressed="false" data-label="' + esc(c.name) + '" data-hint="' + esc(c.instagram || c.website || '') + '">' +
-          '<span class="tick">✓</span><span><b>' + esc(c.name) + '</b> <span class="mono">' + esc(c.instagram || c.website || '') + '</span><small>' + esc(c.why) + '</small></span></button>').join('');
-      $$('.sug', box).forEach(b => b.addEventListener('click', () => {
-        const on = b.getAttribute('aria-pressed') === 'true';
-        const mine = $$('.f-comp').find(i => i.dataset.sug === b.dataset.label);
-        if (on) { // unpick: clear only the box this suggestion filled
-          if (mine) { mine.value = ''; delete mine.dataset.sug; delete mine.dataset.hint; mine.dispatchEvent(new Event('input', { bubbles: true })); }
-          b.setAttribute('aria-pressed', 'false');
-          return;
-        }
-        const free = $$('.f-comp').find(i => !i.value.trim());
-        if (!free) { toast('All three boxes are full. Clear one first.'); return; }
-        free.value = b.dataset.label; free.dataset.sug = b.dataset.label; free.dataset.hint = b.dataset.hint || '';
-        free.dispatchEvent(new Event('input', { bubbles: true }));
-        b.setAttribute('aria-pressed', 'true');
-      }));
-    } catch (e) {
-      box.innerHTML = '<p class="err">' + esc(e.message) + '</p>';
-    } finally {
-      btn.disabled = false; btn.textContent = 'Not sure? Let him sniff out 5';
-    }
-  });
-
-  function formPayload() {
-    return {
-      brand_name: $('#f-name').value.trim(),
-      brand_url: $('#f-url').value.trim(),
-      brand_ig: $('#f-ig').value.trim(),
-      competitors: $$('.f-comp').map(i => ({ name: i.value.trim(), hint: i.dataset.hint || '' })).filter(c => c.name),
-      goal: ($('input[name="goal"]:checked') || {}).value,
-      notes: $('#f-notes').value.trim(),
-      country: $('#f-country').value,
-      mode: $('#f-demo').checked ? 'seed' : 'auto',
-    };
+  function addRival(name, hint) {
+    name = String(name || '').trim();
+    if (!name || F.rivals.length >= 3 || F.rivals.some(r => r.name.toLowerCase() === name.toLowerCase())) return false;
+    F.rivals.push({ name, hint: hint || '' }); F.error = ''; F.demo = false; return true;
   }
-
-  $('#ob-form').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const p = formPayload(), err = $('#ob-error');
-    if (!p.brand_name && !p.brand_url) { err.textContent = 'Tell him your brand name or website.'; $('#f-name').focus(); return; }
-    if (!p.competitors.length && p.mode !== 'seed') { err.textContent = 'Name at least one competitor, or let him sniff some out.'; $$('.f-comp')[0].focus(); return; }
-    err.textContent = '';
-    const btn = $('#btn-feed'); btn.disabled = true; btn.textContent = 'Opening wide…';
-    try { await startRun(p); }
-    catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = 'Feed him'; }
-  });
-
-  /* ================= PAGE 2 · CHEW ================= */
-  let lastPayload = null;
-  const S = { id: null, since: 0, adsShown: false, done: false, run: null, clockT: null, ads: null, word: '' };
-
+  async function suggest() {
+    if (!F.name && !F.url) { F.error = 'Add your brand name or website first, so he knows whose rivals to sniff out.'; showFeed(); return; }
+    F.error = ''; F.showSuggest = true; F.sug = 'loading'; showFeed();
+    try { const r = await api('/suggest', { body: { brand_name: F.name, brand_url: F.url, country: F.market } }); F.sug = r.competitors || []; F.niche = r.niche || ''; }
+    catch (e) { F.sug = { error: e.message }; }
+    showFeed();
+  }
+  function payload() {
+    return { brand_name: F.name.trim(), brand_url: F.url.trim(), brand_ig: F.ig.trim(), competitors: F.rivals.map(r => ({ name: r.name, hint: r.hint || '' })), goal: F.goal, notes: F.notes.trim(), country: F.market, mode: F.demo ? 'seed' : 'auto' };
+  }
   async function startRun(p) {
-    lastPayload = p;
+    S.lastPayload = p;
     const r = await api('/runs/create', { body: p });
     history.pushState({}, '', '/app?run=' + r.id);
     shownSearch = location.search;
     openRun(r.id);
   }
-
-  const STAGE_WORD = { brand: 'SNIFFING', pull: 'FEEDING', analyze: 'CHEWING', synthesize: 'DIGESTING', generate: 'SPITTING', done: 'FRESH OUT' };
-  const STAGE_LABEL = { brand: 'reading your page', pull: 'pulling live competitor ads', analyze: 'reading every ad and your Instagram', synthesize: 'finding what works + the whitespace', generate: 'writing in your voice', done: 'done' };
-
-  function fitTitle() {
-    const box = $('.sc-title'), w = $('#scene-word'), f = $('#scene-fill');
-    if (!box || !box.clientWidth) return;
-    w.style.fontSize = f.style.fontSize = '';
-    const fs = parseFloat(getComputedStyle(w).fontSize);
-    const need = w.scrollWidth, have = box.clientWidth;
-    if (need > have) w.style.fontSize = f.style.fontSize = Math.floor(fs * have / need * 0.98) + 'px';
+  async function feed() {
+    const p = payload();
+    if (!p.brand_name && !p.brand_url) { F.error = 'Tell him your brand name or website.'; return showFeed(); }
+    if (!p.competitors.length && p.mode !== 'seed') { F.error = 'Add at least one rival, or tap “Find my rivals”.'; return showFeed(); }
+    F.error = ''; F.busy = true; showFeed();
+    try { await startRun(p); } catch (e) { F.error = e.message; }
+    F.busy = false;
+    if (S.screen === 'feed') showFeed();
   }
-  window.addEventListener('resize', () => { clearTimeout(fitTitle._t); fitTitle._t = setTimeout(fitTitle, 120); });
 
-  function setWord(stage) {
-    $('#scene').dataset.stage = stage;
-    const word = STAGE_WORD[stage] || 'FEEDING';
-    if (S.word !== word) {
-      S.word = word;
-      $('#scene-word').textContent = word;
-      $('#scene-fill').innerHTML = [...word].map((c, i) => '<span class="lt" style="animation-delay:' + (i * 0.09) + 's">' + esc(c) + '</span>').join('');
-      fitTitle();
-    }
-    const chewing = stage === 'analyze' || stage === 'synthesize';
-    $('#scene-fill').classList.toggle('chewing', chewing && !reduceMotion);
-    const src = chewing ? '/img/gator-sit.webp' : '/img/gator-chomp.webp';
-    if (!$('#scene-gator').src.endsWith(src)) $('#scene-gator').src = src;
+  /* ================= CHEW ================= */
+  let shownSearch = location.search;
+  function chewHTML() {
+    return '<main class="chew"><div class="sky"><croc-game base="/assets/game/" autopilot="on"></croc-game><div class="hudrow">' +
+      '<div class="hud"><span class="px8 s">ADS READ</span><span class="y" style="font:14px \'Press Start 2P\',monospace" id="h-ads">00</span></div>' +
+      '<div class="hud"><span class="px8 s">STAGE</span><span class="y" style="font:14px \'Press Start 2P\',monospace" id="h-stage">1/5</span></div>' +
+      '<div class="hud"><span class="px8 s">TIME</span><span class="y" style="font:14px \'Press Start 2P\',monospace" id="h-clock">0S</span></div></div></div>' +
+      '<div class="chew-body"><div style="display:flex;flex-direction:column;gap:22px"><div>' +
+        '<p style="font:600 15px \'Funnel Sans\',sans-serif;color:var(--mute)"><b style="color:var(--paper)" id="c-brand"></b> vs <span id="c-rivals"></span></p>' +
+        '<h1 class="stage-h" id="c-word">sniffing</h1><p style="margin-top:12px;font-size:18px;color:var(--soft)" id="c-desc"></p></div>' +
+        '<div style="display:flex;align-items:center;gap:14px"><div class="blocks" id="c-blocks">' + '<i></i>'.repeat(20) + '</div><span class="px y" style="font-size:14px;min-width:60px;text-align:right" id="c-pct">0%</span></div>' +
+        '<ol class="stages" id="c-stages"></ol>' +
+        '<div class="runerr" id="c-err" hidden><p class="err" id="c-errmsg"></p><div class="row"><button class="btn" data-act="retry-live">Try live again</button><button class="btn ghost" data-act="retry-demo">Run on demo ads</button><button class="btn ghost" data-act="go" data-k="feed">Back to the form</button></div></div></div>' +
+      '<div class="klog"><p class="px s" style="margin-bottom:12px">KITCHEN LOG</p><ol id="c-log"></ol></div></div></main>';
   }
+  function elapsed(r) { const end = r.finished_at ? new Date(r.finished_at).getTime() : Date.now(); return (end - new Date(r.created_at).getTime()) / 1000; }
 
   function openRun(id, again) {
-    Object.assign(S, { id, since: 0, adsShown: !!again, done: false, ads: null, word: '' }); // again = a regenerate: don't replay the ads flying in
-    $('#onboard').hidden = true; $('#run').hidden = false; $('#results').hidden = true;
-    $('#run').classList.remove('finished');
-    delete $('#results').dataset.rendered;
-    $('#run-error').hidden = true; $('#log').innerHTML = ''; $('#log-final').innerHTML = '';
-    setStep('chew');
-    window.scrollTo(0, 0);
-    setWord('brand');
-    driveAdvance(id);
-    pollLoop(id);
+    Object.assign(S, { id, run: null, done: false, since: 0, logs: [], screen: 'chew', pending: 0 });
+    if (!again) { S.ads = []; S.igPosts = []; S.tab = 'you'; S.sel = 0; S.mapSel = null; S.filter = 'All'; }
+    root.innerHTML = chewHTML(); renderSteps(); window.scrollTo(0, 0);
+    paintChew({ stage: 'brand', progress: 0, input: { brand: {}, competitors: [] }, created_at: new Date().toISOString() });
+    driveAdvance(id); pollLoop(id);
   }
-
   async function driveAdvance(id) {
     let fails = 0;
     while (S.id === id && !S.done) {
       try {
-        const r = await api('/runs/advance', { body: { id } });
-        fails = 0;
+        const r = await api('/runs/advance', { body: { id } }); fails = 0;
         if (r.busy) await sleep(1500);
         if (r.status && r.status !== 'running') break;
-      } catch (e) {
-        fails++;
-        if (fails >= 4) { showError('Lost the connection to the gator: ' + e.message); break; }
-        await sleep(1500 * fails);
-      }
+      } catch (e) { fails++; if (fails >= 4) { chewError('Lost the connection to the croc: ' + e.message); break; } await sleep(1500 * fails); }
     }
   }
-
   async function pollLoop(id) {
     let fails = 0;
     while (S.id === id) {
       try {
-        const r = await api('/runs/get?id=' + encodeURIComponent(id) + '&since=' + S.since + (!S.ads ? '&ads=1' : ''));
-        fails = 0;
-        render(r);
-        if (r.status !== 'running') { S.done = true; break; }
+        const r = await api('/runs/get?id=' + encodeURIComponent(id) + '&since=' + S.since + '&ads=1'); fails = 0;
+        S.run = r; S.ads = r.ads || S.ads; S.angles = r.angles || S.angles; S.igPosts = r.ig_posts || S.igPosts;
+        if (S.screen === 'chew') paintChew(r);
+        if (r.status === 'done') { S.done = true; S.pending = r.controls_pending || 0; await finish(r); break; }
+        if (r.status === 'error') { S.done = true; chewError(r.error || 'Something went wrong.'); break; }
       } catch (e) {
         fails++;
-        if (e.status === 404) { showError(e.message); S.done = true; break; }
-        if (fails >= 6) { showError('Can’t reach the run: ' + e.message); break; }
+        if (e.status === 404) { chewError(e.message); S.done = true; break; }
+        if (fails >= 6) { chewError('Can’t reach the run: ' + e.message); break; }
       }
       await sleep(1200);
     }
   }
-
-  function render(r) {
-    S.run = r;
-    $('#rb-brand').textContent = (r.brand && r.brand.name) || r.input.brand.name || r.input.brand.url;
-    const comps = (r.competitors && r.competitors.length ? r.competitors : r.input.competitors).map(c => c.name);
-    $('#rb-comps').textContent = comps.join(', ') || 'demo competitors';
-    if (r.source) {
-      const live = r.source === 'live', b = $('#rb-source');
-      b.hidden = false; b.textContent = live ? 'live ad library' : (r.source === 'seed-saved' ? 'saved seed' : 'demo seed');
-      b.className = 'badge ' + (live ? 'live' : 'seed');
-    }
-    tickClock(r);
-    if (r.logs && r.logs.length) {
-      const ol = $('#log'), fin = $('#log-final');
-      for (const l of r.logs) {
-        const li = document.createElement('li'); li.className = l.kind; li.textContent = l.line;
-        ol.appendChild(li); fin.appendChild(li.cloneNode(true));
-        S.since = Math.max(S.since, l.id);
-      }
-      while (ol.children.length > 10) ol.removeChild(ol.firstChild); // the full log lives in the results
-    }
-    setWord(r.status === 'done' ? 'done' : r.stage);
-    const pct = r.progress || 0;
-    $('#pct').textContent = pct + '%';
-    $('#rule').style.transform = 'scaleX(' + (pct / 100) + ')';
-    $('#scene-fill').style.clipPath = 'inset(0 ' + Math.max(0, 100 - pct) + '% 0 0)';
-    $('#stage-label').textContent = STAGE_LABEL[r.stage] || '';
-    if (r.angles) S.angles = r.angles;
-    if (r.status === 'done') S.pending = r.controls_pending || 0;
-    if (r.ads && r.ads.length) {
-      S.ads = r.ads;
-      if (!S.adsShown) { S.adsShown = true; if (r.status === 'running') flyAds(r.ads); }
-    }
-    renderCost(r);
-    if (r.status === 'error') showError(r.error || 'Something went wrong.');
-    if (r.ig_posts) S.igPosts = r.ig_posts;
-    if (r.status === 'done' && r.variants && !$('#results').dataset.rendered) {
-      if (r.ads) renderResults(r);
-      else api('/runs/get?id=' + encodeURIComponent(r.id) + '&since=999999999&ads=1').then(full => {
-        S.ads = full.ads || S.ads; S.igPosts = full.ig_posts || S.igPosts; S.angles = full.angles || S.angles;
-        renderResults({ ...r, ...full, logs: [] });
-      }).catch(() => renderResults(r));
-    }
-  }
-
-  function elapsed(r) {
-    const end = r.finished_at ? new Date(r.finished_at).getTime() : Date.now();
-    return (end - new Date(r.created_at).getTime()) / 1000;
-  }
-  function tickClock(r) {
+  function chewError(msg) { if (S.screen !== 'chew') return; const e = $('#c-err'); if (!e) return; e.hidden = false; $('#c-errmsg').textContent = msg; clearInterval(S.clockT); }
+  function paintChew(r) {
+    if (!$('#c-word')) return;
+    const comps = (r.competitors && r.competitors.length ? r.competitors : (r.input && r.input.competitors) || []).map(c => c.name);
+    $('#c-brand').textContent = (r.brand && r.brand.name) || (r.input && r.input.brand && (r.input.brand.name || r.input.brand.url)) || 'your brand';
+    $('#c-rivals').textContent = comps.length ? comps.join(', ') : 'demo rivals';
+    const idx = Math.max(0, STAGES.findIndex(s => s.k === r.stage));
+    $('#c-word').textContent = STAGES[idx].word; $('#c-desc').textContent = STAGES[idx].desc;
+    const pct = Math.max(0, Math.min(100, r.progress || 0));
+    $$('#c-blocks i').forEach((b, i) => b.classList.toggle('on', i < Math.round(pct / 5)));
+    $('#c-pct').textContent = pct + '%'; $('#h-stage').textContent = (idx + 1) + '/5';
+    $('#h-ads').textContent = String(((r.ads || []).length) || Number(((r.cost || {}).pull || {}).ads) || 0).padStart(2, '0');
+    $('#c-stages').innerHTML = STAGES.map((s, i) => '<li class="' + (i < idx ? 'done' : i === idx ? 'now' : '') + '"><span class="px8">' + (i < idx ? 'DONE' : i === idx ? 'NOW' : '···') + '</span><b>' + s.word + '</b></li>').join('');
+    if (r.logs && r.logs.length) for (const l of r.logs) { S.logs.push(l); S.since = Math.max(S.since, l.id); }
+    $('#c-log').innerHTML = S.logs.slice(-9).reverse().map(l => '<li class="' + esc(l.kind || '') + '"><span>' + (l.t != null ? esc(l.t) : '·') + '</span><span>' + esc(l.line) + '</span></li>').join('');
     clearInterval(S.clockT);
-    const f = () => { $('#rb-clock').textContent = elapsed(r).toFixed(1) + 's'; };
-    f();
-    if (!r.finished_at && r.status === 'running') S.clockT = setInterval(f, 100);
+    const f = () => { const c = $('#h-clock'); if (c) c.textContent = Math.round(elapsed(r)) + 'S'; };
+    f(); if (r.created_at && !r.finished_at && r.status === 'running') S.clockT = setInterval(f, 500);
+  }
+  async function finish(r) {
+    if (!r.ads) { try { const full = await api('/runs/get?id=' + encodeURIComponent(r.id) + '&since=999999999&ads=1'); S.run = { ...r, ...full }; S.ads = full.ads || []; S.igPosts = full.ig_posts || []; S.angles = full.angles || []; } catch (_) {} }
+    S.run.logs = S.logs; S.versions = {};
+    showResults();
   }
 
-  function showError(msg) {
-    $('#run-error').hidden = false;
-    $('#run-error-msg').textContent = msg;
-    clearInterval(S.clockT);
-  }
-  function rebuildPayload() {
-    const r = S.run;
-    return lastPayload ? { ...lastPayload } : (r && {
-      brand_name: r.input.brand.name, brand_url: r.input.brand.url, brand_ig: r.input.brand.ig || '',
-      competitors: r.input.competitors.map(c => ({ name: c.input || c.name, hint: c.hint_ig ? '@' + c.hint_ig : (c.site ? c.site + '.com' : '') })),
-      goal: r.input.goal, notes: r.input.notes, country: r.input.country, mode: 'auto',
-    }) || {};
-  }
-  $('#btn-retry-live').addEventListener('click', async () => {
-    const p = rebuildPayload(); p.mode = 'auto';
-    try { await startRun(p); } catch (e) { toast(e.message); }
-  });
-  $('#btn-retry-demo').addEventListener('click', async () => {
-    const r = S.run;
-    const p = lastPayload || (r && {
-      brand_name: r.input.brand.name, brand_url: r.input.brand.url, competitors: r.input.competitors.map(c => c.input || c.name),
-      goal: r.input.goal, notes: r.input.notes, country: r.input.country,
-    }) || {};
-    p.mode = 'seed';
-    if (!p.competitors || !p.competitors.length) p.competitors = ['glowritual', 'dewdrift', 'barebae'];
-    try { await startRun(p); } catch (e) { toast(e.message); }
-  });
-
-  /* ---- ads fly into the gator ---- */
-  const HUES = { peach: ['#f7b267', '#f4845f'], blush: ['#f9a8c9', '#c94f7c'], gold: ['#ffd56b', '#e8a33d'], violet: ['#b08cff', '#6a3bd1'], ember: ['#ff9a5a', '#c2410c'], ink: ['#3a3a40', '#111114'], teal: ['#7bdff2', '#2a7f9e'], sun: ['#ffe066', '#f59e0b'], clay: ['#d9a07a', '#8a4b2d'], rose: ['#ff8fab', '#d6336c'], sky: ['#9ad1ff', '#3b82f6'], mint: ['#b2f7a3', '#43aa8b'], slate: ['#94a3b8', '#334155'] };
-  function hashStr(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return h; }
-  function thumbStyle(a) {
-    if (a.image_url) return 'background-image:url(' + String(a.image_url).replace(/[()'"\s]/g, encodeURIComponent) + ')';
-    const h = HUES[a.hue] || HUES[['peach', 'violet', 'teal', 'mint', 'rose', 'gold'][Math.abs(hashStr(a.id)) % 6]];
-    return 'background:linear-gradient(135deg,' + h[0] + ',' + h[1] + ')';
-  }
-
-  function flyAds(ads) {
-    if (reduceMotion) return;
-    const scene = $('#scene'), gator = $('#scene-gator'), box = $('#flyers');
-    const sr = scene.getBoundingClientRect(), gr = gator.getBoundingClientRect();
-    const mouth = { x: gr.left - sr.left + gr.width * 0.28, y: gr.top - sr.top + gr.height * 0.3 };
-    const crumbs = $('#crumbs'); crumbs.style.left = mouth.x + 'px'; crumbs.style.top = mouth.y + 'px';
-    const fw = sr.width < 600 ? 88 : 120, fh = sr.width < 600 ? 80 : 108;
-    ads.slice(0, sr.width < 600 ? 12 : 18).forEach((a, i) => {
-      const el = document.createElement('div');
-      el.className = 'flyer';
-      el.innerHTML = '<div class="th" style="' + thumbStyle(a) + '"></div><p>' + esc(a.competitor) + ' · ' + (a.days_running || 0) + 'd</p>';
-      // they fly in the gator's lane (right side, upper half), never across the numbers and the log
-      const x0 = sr.width * 0.5 + Math.random() * Math.max(10, sr.width * 0.5 - fw), y0 = 40 + Math.random() * Math.max(10, sr.height * 0.4 - fh);
-      el.style.left = x0 + 'px'; el.style.top = y0 + 'px'; el.style.opacity = 0;
-      box.appendChild(el);
-      const dx = mouth.x - x0 - fw / 2, dy = mouth.y - y0 - fh / 2, rot = Math.random() * 16 - 8;
-      const anim = el.animate([
-        { opacity: 0, transform: 'rotate(' + rot + 'deg) scale(.9)' },
-        { opacity: 1, offset: 0.15, transform: 'rotate(' + rot + 'deg) scale(1)' },
-        { opacity: 1, offset: 0.82, transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(18deg) scale(.45)' },
-        { opacity: 0, transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(24deg) scale(.05)' },
-      ], { duration: 1400, delay: i * 240, easing: 'cubic-bezier(.55,0,.75,.6)', fill: 'forwards' });
-      anim.onfinish = () => { el.remove(); chomp(); };
-    });
-  }
-  function chomp() {
-    $('#scene-gator').animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06,.86)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'ease-in-out' });
-    const cols = ['#F58545', '#DD2A7B', '#8134AF', '#FFC24B'], box = $('#crumbs');
-    for (let i = 0; i < 8; i++) {
-      const c = document.createElement('div'); c.className = 'crumb'; c.style.background = cols[i % 4]; box.appendChild(c);
-      c.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: 'translate(' + (Math.random() * 160 - 80) + 'px,' + (Math.random() * 130 - 100) + 'px) rotate(' + (Math.random() * 360) + 'deg) scale(.4)', opacity: 0 }],
-        { duration: 700, easing: 'cubic-bezier(.16,1,.3,1)' }).onfinish = () => c.remove();
-    }
-  }
-
-  /* ================= PAGE 3 · FRESH OUT: the story ================= */
-  const COMP_COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)'];
-  const cap = (s) => { const t = String(s || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
-  const listJoin = (a) => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
-  const round2 = (n) => (Math.round(n * 100) / 100).toFixed(2);
-  function adById(id) { return (S.ads || []).find(a => a.id === id); }
-  function brandName(r) { return (r.brand && r.brand.name) || r.input.brand.name || 'your brand'; }
-  function compNames(r) { return (r.competitors && r.competitors.length ? r.competitors : r.input.competitors || []).map(c => c.name); }
-  function compColor(r, name) { const i = compNames(r).indexOf(name); return COMP_COLORS[(i < 0 ? 0 : i) % COMP_COLORS.length]; }
-  function keptAds() { return (S.ads || []).filter(a => !a.excluded && a.analysis); }
-  function angleOf(x) { return (x.correction && x.correction.angle) || (x.analysis && x.analysis.angle) || x.angle || null; }
-  function firstSentence(s, max) {
-    const t = String(s || '').trim(); const m = t.match(/^.+?[.!?](?=\s|$)/);
-    let f = m ? m[0] : t; max = max || 180;
-    return f.length > max ? f.slice(0, max).replace(/\s+\S*$/, '') + '…' : f;
-  }
-  // share of each angle in a set of items, weighted (ads count by how long they ran)
+  /* ================= RESULTS: data helpers ================= */
+  const runNames = () => ((S.run.competitors && S.run.competitors.length ? S.run.competitors : S.run.input.competitors) || []).map(c => c.name);
+  const colorOf = (n) => COLORS[Math.max(0, runNames().indexOf(n)) % 3];
+  const angleOf = (x) => (x.correction && x.correction.angle) || (x.analysis && x.analysis.angle) || x.angle || null;
+  const W = (a) => a.weight || 1;
+  const kept = () => S.ads.filter(a => !a.excluded && a.analysis);
+  const brandPosts = () => (S.igPosts || []).filter(p => p.is_brand && p.analysis);
+  const brandName = () => (S.run.brand && S.run.brand.name) || S.run.input.brand.name || brandOf() || 'your brand';
+  const hookOf = (a) => (a.analysis && a.analysis.hook && a.analysis.hook.line) || a.headline || '';
+  const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
   function shares(items, w) {
     const out = {}; let tot = 0;
     for (const x of items) { const a = angleOf(x); if (!a) continue; const k = w ? w(x) : 1; out[a] = (out[a] || 0) + k; tot += k; }
     for (const k in out) out[k] = tot ? out[k] / tot * 100 : 0;
     return out;
   }
-  const W = (a) => a.weight || 1;
-  function brandPosts() { return (S.igPosts || []).filter(p => p.is_brand && p.analysis); }
+  const top = (o, n) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n || 1);
+  const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  const synth = () => S.run.synthesis || {};
+  const auds = () => synth().audiences || [];
+  const targetName = () => (S.run.icp && S.run.icp.target) || synth().recommended_audience;
+  const openPhrase = () => { const n = synth().niche || {}; return String(n.headline_open || (n.underused_angles || [])[0] || '').replace(/[.]+$/, ''); };
+  const distWord = (d) => d < 0.35 ? ['says the same thing', '#FF7A6B'] : d < 0.7 ? ['close: tweak it', '#F7862A'] : ['clearly different', '#3DBA4E'];
 
-  /* ---- 1 · the verdict ---- */
-  function chVerdict(r) {
-    const syn = r.synthesis || {}, niche = syn.niche || {};
-    // the verdict is the open space, said short; the full read sits under it
-    const ws = String(niche.whitespace || '');
-    const open = String(niche.headline_open || (niche.underused_angles || [])[0] || '').replace(/[.]+$/, '');
-    $('#v-head').innerHTML = open ? 'Nobody owns <span class="open-word">' + esc(open) + '</span> yet.' : esc(firstSentence(ws, 90) || 'Here is what your rivals are saying.');
-    const over = (niche.overused_angles || []).slice(0, 3);
-    $('#v-sub').textContent = [ws, over.length ? 'Your rivals lean on ' + listJoin(over) + '.' : ''].filter(Boolean).join(' ');
-    const ads = keptAds(), pulled = Number(((r.cost || {}).pull || {}).ads) || 0;
-    const long30 = ads.filter(a => (a.days_running || 0) >= 30).length;
-    $('#run-summary').innerHTML = [
-      brandName(r) + ' vs ' + listJoin(compNames(r)),
-      'Read ' + ads.length + ' ads' + (pulled > ads.length ? ' (the strongest of ' + pulled + ' the Ad Library returned)' : ''),
-      long30 + ' ran 30+ days (a hint, not proof)',
-      (brandPosts().length ? brandPosts().length + ' of your Instagram posts' : ''),
-      elapsed(r).toFixed(0) + 's',
-      usd((r.cost || {}).total_usd, 3),
-    ].filter(Boolean).map(s => '<span>' + esc(s) + '</span>').join('');
-    // who we matched: each rival and the page its ads came from; a rival we couldn't find is said out loud
-    const nrm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  /* ================= RESULTS: screens ================= */
+  function showResults() {
+    S.screen = 'results'; clearInterval(S.clockT);
+    const r = S.run;
+    S.sel = Math.min(S.sel, Math.max(0, (r.variants || []).length - 1));
+    root.innerHTML = resultsHTML(); renderSteps(); renderFloat();
+    window.scrollTo(0, 0);
+  }
+  function rerender(scrollTabs) {
+    root.innerHTML = resultsHTML(); renderFloat();
+    if (scrollTabs) { const t = $('#tabs'); if (t) window.scrollTo(0, t.offsetTop - 64); }
+  }
+  function renderFloat() {
+    let el = $('#changes'); if (el) el.remove();
+    if (S.screen !== 'results' || !S.pending) return;
+    const d = document.createElement('div'); d.id = 'changes'; d.className = 'changes';
+    d.innerHTML = '<p><b>' + S.pending + (S.pending === 1 ? ' change' : ' changes') + '</b> not applied yet. Regenerating replaces the three ads.</p><button class="btn" data-act="regen">Regenerate</button>';
+    document.body.appendChild(d);
+  }
+
+  function resultsHTML() {
+    const r = S.run, syn = synth(), niche = syn.niche || {}, open = openPhrase();
+    const ads = kept(), posts = brandPosts(), y = syn.you_vs_them, over = (niche.overused_angles || []).slice(0, 3);
     const live = (r.competitors || []).filter(c => c.source === 'live');
-    $('#match-note').hidden = !live.length;
-    $('#match-note').innerHTML = live.map(c => c.ads_kept
-      ? '<p><b>' + esc(c.name) + '</b> · ' + c.ads_kept + ' ads' + (c.page_name && nrm(c.page_name) !== nrm(c.name) ? ' from the page “' + esc(c.page_name) + '”' : '') + '</p>'
-      : '<p class="miss"><b>' + esc(c.name) + '</b> · no active Meta ads found, so it is not in this analysis.' + ((c.candidates || []).length ? ' The search only turned up ' + esc(c.candidates.join(', ')) + ', ' + ((c.candidates || []).length === 1 ? 'which is' : 'which are') + ' not the same brand.' : '') + ' Paste its Facebook page link in place of its name to include it.</p>').join('');
-    const note = $('#seed-note');
-    if (r.source && r.source !== 'live') {
-      note.hidden = false;
-      note.innerHTML = r.source === 'seed' ?
-        '<b>Demo ads.</b> These rival ads are a fictional sample pack, not your real rivals. Connect Apify for a live pull. The ads are still written for ' + esc(brandName(r)) + '.' :
-        '<b>Saved ads.</b> Rival ads come from an earlier saved pull, not a fresh one.';
-    } else note.hidden = true;
+    const nrm = (x) => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const notes = live.map(c => c.ads_kept
+      ? '<div class="note"><b>' + esc(c.name) + '</b> · ' + c.ads_kept + ' ads' + (c.page_name && nrm(c.page_name) !== nrm(c.name) ? ' from the page “' + esc(c.page_name) + '”' : '') + '</div>'
+      : '<div class="note miss"><b>' + esc(c.name) + '</b> · no active Meta ads found, so it is not in this analysis.' + ((c.candidates || []).length ? ' The search only turned up ' + esc(c.candidates.join(', ')) + ', which ' + (c.candidates.length === 1 ? 'is' : 'are') + ' not the same brand.' : '') + ' Paste its Facebook page link in place of its name to include it.</div>').join('') +
+      (r.source && r.source !== 'live' ? '<div class="note"><b>' + (r.source === 'seed' ? 'Demo ads.' : 'Saved ads.') + '</b> ' + (r.source === 'seed' ? 'These rival ads are a fictional sample pack, not your real rivals.' : 'Rival ads come from an earlier saved pull, not a fresh one.') + ' The ads are still written for ' + esc(brandName()) + '.</div>' : '');
+    const tabs = [['you', 'You', posts.length ? String(posts.length) : '–'], ['rivals', 'Rivals', String(runNames().length)], ['map', 'The map', '·'], ['ads', 'Your ads', String((r.variants || []).length)], ['eaten', 'Ads eaten', String(S.ads.length)]];
+    const cards = [
+      ['YOU', y ? firstSentence(y.gap || y.summary, 110) : 'Compared from your website.', posts.length ? 'From ' + posts.length + ' Instagram posts' : 'From your website', 'you'],
+      ['RIVALS', over.length ? 'Your rivals lean on ' + listJoin(over) + '.' : 'Here is what your rivals say.', 'From ' + ads.length + (r.source === 'live' ? ' live Meta ads' : ' demo ads'), 'rivals'],
+      ['THE GAP', open ? 'Nobody owns ' + open + '. Your new ads sit there.' : 'Your new ads aim at the open space.', 'See how far apart everyone is', 'map'],
+    ];
+    return '<main style="padding-bottom:120px"><section class="hero">' +
+      '<div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center"><p style="font:600 15px \'Funnel Sans\',sans-serif"><b>' + esc(brandName()) + '</b> vs ' + esc(listJoin(runNames()) || 'demo rivals') + '</p>' +
+        '<div class="row"><button class="btn night" data-act="share">Copy share link</button><button class="btn outline-n" data-act="go" data-k="feed">Feed him again</button></div></div>' +
+      '<h1' + (open.length > 26 ? ' class="long"' : '') + '>' + (open ? 'nobody owns <mark>' + esc(open) + '</mark> yet.' : esc(firstSentence(niche.whitespace, 80) || 'here is what your rivals say.')) + '</h1>' +
+      '<p class="lede">' + esc([niche.whitespace, over.length ? 'Your rivals lean on ' + listJoin(over) + '.' : ''].filter(Boolean).join(' ')) + '</p>' +
+      (notes ? '<div class="notes">' + notes + '</div>' : '') +
+      '<div class="cards3">' + cards.map(([l, t, b, k]) => '<button class="sumcard" data-act="tab" data-k="' + k + '"><span style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="px s">' + l + '</span><span style="font:600 13px \'Funnel Sans\',sans-serif;color:var(--orange)">See →</span></span><b>' + esc(t) + '</b><span style="font-size:13px;color:var(--mute)">' + esc(b) + '</span></button>').join('') + '</div></section>' +
+      '<nav class="tabs" id="tabs">' + tabs.map(([k, l, c]) => '<button class="tab' + (S.tab === k ? ' on' : '') + '" data-act="tab" data-k="' + k + '">' + l + '<span>' + c + '</span></button>').join('') + '</nav>' +
+      ({ you: tabYou, rivals: tabRivals, map: tabMap, ads: tabAds, eaten: tabEaten }[S.tab] || tabYou)() +
+      '<p class="foot"><span>Run cost ' + usd((r.cost || {}).total_usd) + ' · ' + Math.round(elapsed(r)) + 's · days running is a hint, not proof: Meta does not share spend.</span></p></main>';
   }
 
-  /* ---- 2 · loudest: who says what, as a dot matrix ---- */
-  function chLoud(r) {
-    const ads = keptAds(), names = compNames(r);
-    const niche = shares(ads, W);
-    const top = Object.entries(niche).sort((a, b) => b[1] - a[1])[0];
-    $('#loud-head').textContent = top ? '“' + cap(top[0]) + '” is ' + Math.round(top[1]) + '% of what they say.' : 'What they say.';
-    const posts = brandPosts(), vars = r.variants || [];
-    const cols = names.map(n => ({ label: n, s: shares(ads.filter(a => a.competitor === n), W), rival: true }));
-    if (posts.length) cols.push({ label: 'Your Instagram', s: shares(posts), you: true });
-    if (vars.length) cols.push({ label: 'Your 3 new ads', s: shares(vars), you: true });
-    $('#loud-sub').textContent = 'Share of each rival’s ads by angle, weighted by how long each ad has run' +
-      (posts.length ? ', beside your own Instagram and the three new ads.' : ', beside the three new ads.');
-    const angles = [...new Set(cols.flatMap(c => Object.keys(c.s)))].sort((a, b) => (niche[b] || 0) - (niche[a] || 0));
-    const dot = (v, you) => v > 0.5 ? '<span class="dot' + (you ? ' you' : '') + '" style="width:' + (8 + Math.sqrt(v) * 4.6).toFixed(1) + 'px;height:' + (8 + Math.sqrt(v) * 4.6).toFixed(1) + 'px"></span><span class="val num">' + Math.round(v) + '%</span>' : '';
-    const rows = angles.map(a => {
-      const rivals = cols.filter(c => c.rival).reduce((s, c) => s + (c.s[a] || 0), 0);
-      const yours = cols.filter(c => c.you).reduce((s, c) => s + (c.s[a] || 0), 0);
-      const only = rivals < 0.5 && yours > 0.5;
-      return '<tr' + (only ? ' class="open"' : '') + '><th scope="row"><span>' + esc(a) + '</span></th>' +
-        cols.map(c => '<td' + (c.you ? ' class="colyou"' : '') + '>' + dot(c.s[a] || 0, c.you) + '</td>').join('') + '</tr>';
-    }).join('');
-    const anyOnly = angles.some(a => cols.filter(c => c.rival).every(c => !(c.s[a] > 0.5)) && cols.some(c => c.you && c.s[a] > 0.5));
-    $('#loud').innerHTML = '<table class="matrix"><thead><tr><th>Angle</th>' + cols.map(c => '<th class="col" scope="col">' + esc(c.label) + '</th>').join('') + '</tr></thead><tbody>' + rows + '</tbody></table>' +
-      (anyOnly ? '<p class="legend-note"><span class="open-word">Highlighted</span> rows are angles only you use.</p>' : '');
+  /* ---- You ---- */
+  function tabYou() {
+    const r = S.run, y = synth().you_vs_them, posts = brandPosts(), b = r.brand || {};
+    const aud = auds().find(a => a.name === targetName()) || auds()[0];
+    const edited = !!(r.icp && r.icp.audiences);
+    const mine = shares(posts), theirs = shares(kept(), W);
+    const ig = (r.input.brand.ig || (r.ig && r.ig.brand) || '').replace(/^@?/, '@');
+    const attrs = [aud && aud.need ? ['WANTS', aud.need] : null, aud ? ['STATUS', aud.status === 'open' ? 'Nobody else aims here.' : (aud.status || 'inferred')] : null,
+      isKnown(b.price_band) ? ['PRICE', b.price_band] : null, isKnown(b.target_buyer) ? ['BUYER', b.target_buyer] : null].filter(Boolean);
+    const words = [...(b.proof_points || []), ...(b.offers || [])].filter(isKnown).slice(0, 6);
+    const icp = aud ? '<article class="icp' + (edited ? ' edited' : '') + '"><div class="top-i"><span class="tag">YOUR ICP · ' + (edited ? 'EDITED' : 'INFERRED') + '</span></div><div class="bd">' +
+      '<div><h3>' + esc(aud.name) + '</h3>' + (aud.who ? '<p style="margin-top:6px;font-size:16px;color:#37506E">' + esc(aud.who) + '</p>' : '') + '</div>' +
+      (attrs.length ? '<div class="attrs">' + attrs.map(([k, v]) => '<div><p class="k">' + k + '</p><p>' + esc(v) + '</p></div>').join('') + '</div>' : '') +
+      (words.length ? '<div><p class="px8" style="color:var(--blue);margin-bottom:8px">WORDS THAT LAND</p><div class="row words">' + words.map(w => '<span>' + esc(w) + '</span>').join('') + '</div></div>' : '') +
+      '<div class="row" style="align-items:center"><button class="btn night" data-act="edit-aud">Edit audiences</button><span style="font-size:13px;color:#5B6B7E">' + (posts.length ? 'Based on ' + posts.length + ' posts and your site' : 'Based on your site and the rival ads') + '</span></div></div></article>' : '';
+    const angleBars = posts.length ? top(mine, 5).map(([k, v]) => '<div class="bar3"><span>' + esc(k) + '</span><b style="width:' + Math.max(2, v) + '%"></b><span class="px y">' + Math.round(v) + '%</span></div>').join('')
+      : '<div class="row">' + ((y && y.you_lean_on) || []).map(a => '<span class="vchip">' + esc(a) + '</span>').join('') + '</div>';
+    const fm = {}; posts.forEach(p => { const k = p.post_type || 'post'; fm[k] = (fm[k] || 0) + 1; });
+    const FC = ['#37B7C3', '#7CD2FF', '#37506E'];
+    const fmArr = Object.entries(fm).sort((a, b) => b[1] - a[1]).map(([n, c], i) => ({ n, pct: Math.round(c / posts.length * 100), c: FC[i % 3] }));
+    const liked = posts.slice().sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 3);
+    const voice = [...(b.voice_traits || []), b.tone_of_voice].filter(isKnown).slice(0, 6);
+    const right = '<div style="display:flex;flex-direction:column;gap:16px">' +
+      '<div class="sidec"><p class="px s">WHAT YOU POST</p>' + (posts.length || (y && (y.you_lean_on || []).length) ? angleBars : '<p style="font-size:14px;color:var(--mute)">No Instagram posts were available. ' + (r.ig && r.ig.state === 'done' && r.ig.brand ? 'Instagram came back empty for @' + esc(r.ig.brand) + '. ' : '') + 'Add your handle on the next run to compare your grid against their ads.</p>') + '</div>' +
+      (posts.length || voice.length ? '<div class="sidec">' + (posts.length ? '<p class="px s">FORMATS</p><div class="stack">' + fmArr.map(f => '<span style="width:' + f.pct + '%;background:' + f.c + '"></span>').join('') + '</div><div class="row" style="gap:14px;font-size:14px;color:var(--soft)">' + fmArr.map(f => '<span style="display:flex;align-items:center;gap:6px"><i style="width:10px;height:10px;border-radius:2px;background:' + f.c + '"></i>' + esc(f.n) + ' ' + f.pct + '%</span>').join('') + '</div>' : '') +
+        (voice.length ? '<p class="px s" style="margin-top:6px">HOW YOU SOUND</p><div class="row">' + voice.map(v => '<span class="vchip">' + esc(v) + '</span>').join('') + '</div>' : '') + '</div>' : '') +
+      (liked.length ? '<div class="sidec"><p class="px s">MOST-LIKED POSTS</p><div class="posts">' + liked.map(p => '<div style="display:flex;flex-direction:column;gap:6px"><div class="thumb"' + (p.image_url ? ' style="background-image:url(\'' + esc(String(p.image_url).replace(/'/g, '%27')) + '\')"' : '') + '>' + (p.likes != null ? '<span>♥ ' + esc(p.likes) + '</span>' : '') + '</div><span style="font-size:13px;color:var(--soft);line-height:1.3">' + esc(firstSentence(p.caption || (p.analysis && p.analysis.hook && p.analysis.hook.line) || '', 60)) + '</span><span style="font-size:12px;color:var(--teal)">' + esc(angleOf(p) || '') + '</span></div>').join('') + '</div></div>' : '') + '</div>';
+    return '<section class="pane"><div class="pane-h"><h2>' + esc(aud ? 'your people: ' + aud.name.toLowerCase() + '.' : 'who you already talk to.') + '</h2><p>From <b style="color:var(--paper)">' + esc(posts.length ? ig : 'your website') + '</b> · ' + (posts.length ? 'last ' + posts.length + ' posts and your site' : 'your site') + ', read by AI. Dashed means inferred: edit it if it’s wrong.</p></div>' +
+      '<div class="two">' + icp + right + '</div>' +
+      (y && y.summary ? '<div class="callout">' + esc(y.summary) + '</div>' : '') +
+      '<div class="nextrow"><button class="btn paper" data-act="tab" data-k="rivals">Next: your rivals →</button></div></section>';
   }
 
-  /* ---- 3 · the map: where every ad sits, and how far apart ---- */
-  const quadName = (x, y) => (x < 0 ? 'rational' : 'emotional') + ', ' + (y < 0 ? 'value-led' : 'premium') + ' corner';
-  const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
-  function nearestRival(p, ads) {
-    let best = null;
-    for (const a of ads) { if (!a.pos) continue; const d = dist(p, a.pos); if (!best || d < best.d) best = { d, a }; }
-    return best;
+  /* ---- Rivals ---- */
+  function tabRivals() {
+    const r = S.run, ads = kept(), names = runNames(), syn = synth(), list = auds(), posts = brandPosts();
+    const byRival = (n) => ads.filter(a => a.competitor === n);
+    const sh = (n) => shares(byRival(n), W);
+    const offerPct = (as) => as.length ? Math.round(as.filter(a => angleOf(a) === 'offer' || (a.analysis && a.analysis.offer)).length / as.length * 100) : 0;
+    const mostCommon = (arr) => { const c = {}; arr.filter(Boolean).forEach(x => { c[x] = (c[x] || 0) + 1; }); return (top(c, 1)[0] || [''])[0]; };
+    const days = (as) => as.map(a => a.days_running || 0);
+    const crowded = list.filter(a => a.status === 'crowded');
+    const youTop = posts.length ? top(shares(posts), 1)[0] : null;
+    const tgt = list.find(a => a.name === targetName()) || list[0];
+    const topAud = (n) => (list.slice().sort((a, b) => ((b.share || {})[n] || 0) - ((a.share || {})[n] || 0))[0] || {}).name || '–';
+    const rows = [
+      ['Main angle', ...names.map(n => { const t = top(sh(n), 1)[0]; return t ? t[0] + ' · ' + Math.round(t[1]) + '%' : '–'; }), youTop ? youTop[0] + ' · ' + Math.round(youTop[1]) + '%' : '–'],
+      ['Hook style', ...names.map(n => mostCommon(byRival(n).map(a => a.analysis.hook && a.analysis.hook.type)) || '–'), posts.length ? mostCommon(posts.map(p => p.analysis.hook && p.analysis.hook.type)) || '–' : '–'],
+      ['Uses discounts', ...names.map(n => offerPct(byRival(n)) + '% of ads'), posts.length ? offerPct(posts) + '% of posts' : '–'],
+      ['Formats', ...names.map(n => { const c = {}; byRival(n).forEach(a => { const f = a.analysis.format; if (f) c[f] = (c[f] || 0) + 1; }); return top(c, 2).map(x => x[0]).join(', ') || '–'; }), (() => { const c = {}; posts.forEach(p => { c[p.post_type || 'post'] = (c[p.post_type || 'post'] || 0) + 1; }); return top(c, 2).map(x => x[0]).join(', ') || '–'; })()],
+      ['Longest-running', ...names.map(n => Math.max(0, ...days(byRival(n))) + ' days'), 'no ads yet'],
+      ['Who they target', ...names.map(topAud), tgt ? tgt.name : '–'],
+    ];
+    const cols = '170px repeat(' + (names.length + 1) + ',minmax(0,1fr))';
+    const matrixCols = 'minmax(200px,1.6fr) repeat(' + (names.length + 1) + ',minmax(0,1fr)) 120px';
+    const has = (a, n) => ((a.share || {})[n] || 0) >= 20;
+    return '<section class="pane"><div class="pane-h"><h2>' + esc(crowded.length ? 'they’re fighting over ' + crowded[0].name.toLowerCase() + '.' : 'what your rivals are saying.') + '</h2><p>' + ads.length + (r.source === 'live' ? ' live Meta ads' : ' demo ads') + ' from ' + names.length + ' rivals, weighted by days running. Longevity is a hint, not proof: Meta doesn’t share spend.</p></div>' +
+      '<div class="stat4"><div><b>' + ads.length + '</b><span>ads read</span></div><div><b>' + Math.round(avg(days(ads))) + 'D</b><span>average time running</span></div>' +
+      '<div><b>' + (() => { const s = shares(ads, W); return Math.round((s.offer || 0) + (s['pain point'] || 0)); })() + '%</b><span>lead with a discount or a pain point</span></div>' +
+      '<div><b>' + ((syn.niche || {}).underused_angles || []).length + '</b><span>angles no rival uses</span></div></div>' +
+      '<div style="display:flex;flex-direction:column;gap:14px"><h3 class="disp" style="font-size:clamp(24px,2.6vw,32px);line-height:1;font-weight:800">side by side</h3><div class="tbl"><div>' +
+        '<div class="tr" style="grid-template-columns:' + cols + '"><span></span>' + names.map(n => '<span class="head"><i style="width:10px;height:10px;border-radius:2px;background:' + colorOf(n) + '"></i>' + esc(n) + '</span>').join('') + '<span class="head you"><i style="width:10px;height:10px;border-radius:2px;background:var(--teal)"></i>You</span></div>' +
+        rows.map(([k, ...cells]) => '<div class="tr" style="grid-template-columns:' + cols + '"><span class="k">' + k + '</span>' + cells.map((c, i) => '<span' + (i === cells.length - 1 ? ' class="you"' : '') + '>' + esc(c) + '</span>').join('') + '</div>').join('') + '</div></div></div>' +
+      '<div class="grid-auto" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">' + names.map(n => {
+        const as = byRival(n), s = sh(n), t2 = top(s, 2), hk = mostCommon(as.map(a => a.analysis.hook && a.analysis.hook.type));
+        const long = as.slice().sort((a, b) => (b.days_running || 0) - (a.days_running || 0)).slice(0, 3);
+        const icps = list.filter(a => ((a.share || {})[n] || 0) >= 25).sort((a, b) => b.share[n] - a.share[n]).slice(0, 2);
+        return '<article class="rcard"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><h3><i style="background:' + colorOf(n) + '"></i>' + esc(n) + '</h3><span class="px8 s">' + as.length + ' ADS · AVG ' + Math.round(avg(days(as))) + 'D</span></div>' +
+          '<p style="color:var(--soft)">' + (t2.length ? 'Leans on ' + t2.map(([k, v]) => esc(k) + ' (' + Math.round(v) + '%)').join(' and ') + (hk ? ', opening with ' + esc(hk) + ' hooks' : '') + '.' : 'Not enough ads read to say.') + '</p>' +
+          '<div><p class="lab">LONGEST-RUNNING</p><div class="posts">' + long.map(a => '<div style="display:flex;flex-direction:column;gap:6px"><div class="thumb sq"' + (a.image_url ? ' style="background-image:url(\'' + esc(String(a.image_url).replace(/'/g, '%27')) + '\')"' : '') + '><span>' + (a.days_running || 0) + 'D</span></div><span style="font-size:13px;line-height:1.3">“' + esc(firstSentence(hookOf(a), 70)) + '”</span></div>').join('') + '</div></div>' +
+          (icps.length ? '<div style="border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px"><p class="lab" style="margin:0">WHO THEIR ADS TARGET · INFERRED</p>' + icps.map(a => { const others = names.filter(o => o !== n && has(a, o)); return '<div class="icpmini"><div><b>' + esc(a.name) + '</b><small style="color:' + (others.length ? '#F7862A' : '#3DBA4E') + '">' + (others.length ? 'shared with ' + esc(others.join(', ')) : 'low overlap') + '</small></div><p style="font-size:14px;color:var(--soft)">' + esc(a.who || '') + '</p></div>'; }).join('') + '</div>' : '') + '</article>';
+      }).join('') + '</div>' +
+      (list.length ? '<div style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h3 class="disp" style="font-size:clamp(24px,2.6vw,32px);line-height:1;font-weight:800">who everyone targets</h3><button class="btn teal" data-act="edit-aud">Edit audiences</button></div><div class="tbl"><div>' +
+        '<div class="tr" style="grid-template-columns:' + matrixCols + ';font:600 13px \'Funnel Sans\',sans-serif;color:var(--mute)"><span>Audience</span>' + names.map(n => '<span style="text-align:center;padding:12px">' + esc(n) + '</span>').join('') + '<span style="text-align:center;padding:12px">You</span><span>Status</span></div>' +
+        list.map(a => { const nr = names.filter(n => has(a, n)).length, isYou = a.name === (tgt && tgt.name), only = isYou && !nr;
+          return '<div class="tr" style="grid-template-columns:' + matrixCols + (only ? ';background:var(--navy2)' : '') + '"><span class="disp" style="font-weight:700;font-size:16px"><span' + (only ? ' class="hl" style="padding:0 .2em;border-radius:3px"' : '') + '>' + esc(a.name) + '</span></span>' +
+            names.map((n, i) => '<span><i class="sqg" style="' + (has(a, n) ? 'background:' + COLORS[i % 3] : 'box-shadow:inset 0 0 0 2px var(--line)') + '"></i></span>').join('') + '<span><i class="sqg" style="' + (isYou ? 'background:var(--teal)' : 'box-shadow:inset 0 0 0 2px var(--line)') + '"></i></span>' +
+            '<span><span class="chipst' + (only ? ' open' : '') + '">' + (only ? 'only you' : nr === 0 ? 'open' : nr === 1 ? 'one rival' : 'crowded') + '</span></span></div>'; }).join('') + '</div></div></div>' : '') +
+      '<div class="nextrow"><button class="btn paper" data-act="tab" data-k="map">Next: see the map →</button></div></section>';
   }
-  function apart(d) { return d < 0.35 ? 'say nearly the same thing' : d < 0.7 ? 'overlap a lot' : d < 1.1 ? 'differ' : 'are far apart'; }
-  function chMap(r) {
-    const ads = keptAds().filter(a => a.pos), names = compNames(r), vars = (r.variants || []).filter(v => v.pos), posts = brandPosts().filter(p => p.pos);
-    const SZ = 600, PAD = 46, span = SZ - PAD * 2;
-    const X = (x) => PAD + (x + 1) / 2 * span, Y = (y) => PAD + (1 - (y + 1) / 2) * span;
+
+  /* ---- Map ---- */
+  function mapModel() {
+    const ads = kept().filter(a => a.pos), vars = (S.run.variants || []).filter(v => v.pos), posts = brandPosts().filter(p => p.pos);
+    const nodes = [
+      ...ads.map(a => ({ id: 'r' + a.id, kind: 'rival', ad: a, rival: a.competitor, pos: a.pos, days: a.days_running || 0, hook: hookOf(a), angle: angleOf(a) })),
+      ...posts.map((p, i) => ({ id: 'p' + i, kind: 'post', pos: p.pos, hook: firstSentence(p.caption || (p.analysis.hook && p.analysis.hook.line) || 'Instagram post', 80), angle: angleOf(p) })),
+      ...vars.map(v => ({ id: 'n' + v.idx, kind: 'new', n: v.idx + 1, v, pos: v.pos, hook: v.overlay_text || v.headline, angle: v.angle })),
+    ];
+    const rivals = nodes.filter(n => n.kind === 'rival');
+    const nearest = (node, k, pool) => (pool || rivals).filter(o => o.id !== node.id).map(o => ({ o, d: dist(node.pos, o.pos) })).sort((a, b) => a.d - b.d).slice(0, k);
+    return { nodes, rivals, nearest };
+  }
+  function tabMap() {
+    const r = S.run, m = mapModel(), names = runNames();
+    if (!m.rivals.length) return '<section class="pane"><div class="pane-h"><h2>the map.</h2><p>No ad positions were available for this run.</p></div></section>';
+    if (!m.nodes.find(n => n.id === S.mapSel)) S.mapSel = (m.nodes.find(n => n.kind === 'new') || m.rivals[0]).id;
+    const sel = m.nodes.find(n => n.id === S.mapSel), near = m.nearest(sel, 3), nearIds = new Set(near.map(n => n.o.id));
+    const X = (x) => 7 + (x + 1) / 2 * 86, Y = (y) => 7 + (1 - (y + 1) / 2) * 86;
     // where the rivals' weight sits, by quadrant
-    const q = { '-1,-1': 0, '1,-1': 0, '-1,1': 0, '1,1': 0 }; let tot = 0, cx = 0, cy = 0;
-    for (const a of ads) { const k = (a.pos.x < 0 ? -1 : 1) + ',' + (a.pos.y < 0 ? -1 : 1); q[k] += W(a); tot += W(a); cx += a.pos.x * W(a); cy += a.pos.y * W(a); }
-    cx /= tot || 1; cy /= tot || 1;
-    const emptiest = Object.entries(q).sort((a, b) => a[1] - b[1])[0];
-    const openQ = tot && emptiest[1] / tot < 0.12 ? emptiest[0].split(',').map(Number) : null;
-    const crowdQ = Object.entries(q).sort((a, b) => b[1] - a[1])[0][0].split(',').map(Number);
-    $('#map-head').innerHTML = ads.length ? 'Rivals crowd the ' + esc(quadName(crowdQ[0], crowdQ[1])) + '.' + (openQ ? ' The <span class="open-word">' + esc(quadName(openQ[0], openQ[1])) + '</span> is open.' : '') : 'The map.';
-    const est = ads.filter(a => a.pos.estimated).length;
-    $('#map-sub').textContent = 'Each dot is one rival ad, sized by how long it has run. Dots close together say similar things; far apart, different things. Squares are your three new ads' +
-      (posts.length ? '; rings are your Instagram posts.' : '.') + (est ? ' Dashed dots: position estimated from the ad’s angle.' : '');
-    const quad = (qx, qy) => {
-      const isOpen = openQ && openQ[0] === qx && openQ[1] === qy;
-      const x0 = qx < 0 ? PAD : SZ / 2, y0 = qy > 0 ? PAD : SZ / 2;
-      return '<rect class="quad' + (isOpen ? ' open' : '') + '" x="' + x0 + '" y="' + y0 + '" width="' + span / 2 + '" height="' + span / 2 + '" rx="10"/>' +
-        (isOpen ? '<text class="qlab" x="' + (x0 + 12) + '" y="' + (y0 + 24) + '">open ground</text>' : '');
-    };
-    const dots = ads.slice().sort((a, b) => (b.days_running || 0) - (a.days_running || 0)).map(a =>
-      '<circle class="ad' + (a.pos.estimated ? ' est' : '') + '" tabindex="0" role="button" aria-label="' + esc(a.competitor + ', ' + (a.days_running || 0) + ' days, ' + (angleOf(a) || '')) + '" data-ad="' + esc(a.id) + '" cx="' + X(a.pos.x).toFixed(1) + '" cy="' + Y(a.pos.y).toFixed(1) + '" r="' + (5 + Math.min(14, Math.sqrt(a.days_running || 1) * 0.7)).toFixed(1) + '" fill="' + compColor(r, a.competitor) + '" fill-opacity=".88" stroke="' + (a.pos.estimated ? 'var(--night)' : 'var(--paper)') + '" stroke-width="1.5"/>').join('');
-    const rings = posts.map(p => '<circle class="ig" cx="' + X(p.pos.x).toFixed(1) + '" cy="' + Y(p.pos.y).toFixed(1) + '" r="7"/>').join('');
-    const yours = vars.map((v, i) => '<g class="you-v" tabindex="0" role="button" aria-label="Your ad ' + (i + 1) + '" data-var="' + i + '"><rect class="you-mark" x="' + (X(v.pos.x) - 14).toFixed(1) + '" y="' + (Y(v.pos.y) - 14).toFixed(1) + '" width="28" height="28" rx="7"/><text class="you-lab" text-anchor="middle" x="' + X(v.pos.x).toFixed(1) + '" y="' + (Y(v.pos.y) + 4.5).toFixed(1) + '">' + (i + 1) + '</text></g>').join('');
-    $('#map').innerHTML = '<svg viewBox="0 0 ' + SZ + ' ' + SZ + '" role="img" aria-label="Positioning map of rival ads">' +
-      quad(-1, 1) + quad(1, 1) + quad(-1, -1) + quad(1, -1) +
-      '<line class="axis" x1="' + PAD + '" y1="' + SZ / 2 + '" x2="' + (SZ - PAD) + '" y2="' + SZ / 2 + '"/><line class="axis" x1="' + SZ / 2 + '" y1="' + PAD + '" x2="' + SZ / 2 + '" y2="' + (SZ - PAD) + '"/>' +
-      '<text class="axlab" x="' + PAD + '" y="' + (SZ / 2 - 8) + '">Rational</text><text class="axlab" text-anchor="end" x="' + (SZ - PAD) + '" y="' + (SZ / 2 - 8) + '">Emotional</text>' +
-      '<text class="axlab" text-anchor="middle" x="' + SZ / 2 + '" y="' + (PAD - 14) + '">Premium-led</text><text class="axlab" text-anchor="middle" x="' + SZ / 2 + '" y="' + (SZ - PAD + 26) + '">Value-led</text>' +
-      dots + rings + yours + '</svg>';
-    // legend
-    const counts = Object.fromEntries(names.map(n => [n, ads.filter(a => a.competitor === n).length]));
-    $('#map-legend').innerHTML = names.map(n => '<div class="lg"><i style="background:' + compColor(r, n) + '"></i>' + esc(n) + ' <span class="num">' + counts[n] + '</span></div>').join('') +
-      '<div class="lg"><i class="yours"></i>Your three new ads</div>' +
-      (posts.length ? '<div class="lg"><i style="border:1.6px solid var(--paper);background:transparent"></i>Your Instagram posts</div>' : '') +
-      (openQ ? '<div class="lg"><i class="openchip"></i>Open ground: almost no rival ads</div>' : '') +
-      (est ? '<div class="lg"><i class="est"></i>Estimated position</div>' : '');
-    // distances: rival to rival, and each new ad to its nearest rival
-    const cent = names.map(n => { const m = ads.filter(a => a.competitor === n); const w = m.reduce((s, a) => s + W(a), 0) || 1;
-      return { n, p: { x: m.reduce((s, a) => s + a.pos.x * W(a), 0) / w, y: m.reduce((s, a) => s + a.pos.y * W(a), 0) / w }, k: m.length }; }).filter(c => c.k);
-    const pairs = [];
-    for (let i = 0; i < cent.length; i++) for (let j = i + 1; j < cent.length; j++) {
-      const d = dist(cent[i].p, cent[j].p);
-      pairs.push('<div class="row"><span>' + esc(cent[i].n) + ' ↔ ' + esc(cent[j].n) + '</span><span class="num">' + round2(d) + '</span><small>Their ads ' + apart(d) + '.</small></div>');
-    }
-    const vrows = vars.map((v, i) => { const nr = nearestRival(v.pos, ads); if (!nr) return '';
-      return '<div class="row"><span>Your ad ' + (i + 1) + ' · ' + esc(v.angle) + '</span><span class="num">' + round2(nr.d) + '</span><small>Nearest rival ad: ' + esc(nr.a.competitor) + ', “' + esc((nr.a.analysis.hook && nr.a.analysis.hook.line) || nr.a.headline || '') + '”</small></div>'; }).join('');
-    $('#map-dist').innerHTML = (pairs.length ? '<h3>How far apart the rivals are</h3>' + pairs.join('') : '') + (vrows ? '<h3>How far your new ads stand from them</h3>' + vrows : '') +
-      '<p class="basis">Distance on the map, 0 = the same message, 2.8 = opposite corners.</p>';
-    bindMap(r, ads, vars);
-  }
-  function bindMap(r, ads, vars) {
-    const map = $('#map'), tip = $('#map-tip');
-    const show = (el) => {
-      $$('.hot', map).forEach(x => x.classList.remove('hot'));
-      if (!el) { map.classList.remove('dim'); tip.hidden = true; return; }
-      el.classList.add('hot'); map.classList.add('dim');
-      if (el.dataset.ad) {
-        const a = adById(el.dataset.ad), others = ads.filter(x => x.competitor !== a.competitor), nr = nearestRival(a.pos, others);
-        tip.innerHTML = '<b>' + esc(a.competitor) + '</b> · <span class="num">' + (a.days_running || 0) + 'd</span> · ' + esc(angleOf(a) || '') + '<br>“' + esc((a.analysis.hook && a.analysis.hook.line) || a.headline || '') + '”' +
-          (nr ? '<br>Closest ad from another rival: ' + esc(nr.a.competitor) + ', <span class="num">' + round2(nr.d) + '</span> away.' : '');
-      } else {
-        const i = Number(el.dataset.var), v = vars[i], nr = nearestRival(v.pos, ads);
-        tip.innerHTML = '<b>Your ad ' + (i + 1) + '</b> · ' + esc(v.angle) + '<br>“' + esc(v.headline || '') + '”' + (nr ? '<br>Nearest rival ad is <span class="num">' + round2(nr.d) + '</span> away (' + esc(nr.a.competitor) + ').' : '');
-      }
-      tip.hidden = false;
-    };
-    map.onmouseover = (e) => { const el = e.target.closest('.ad,.you-v'); if (el) show(el); };
-    map.onmouseleave = () => show(null);
-    map.onclick = (e) => show(e.target.closest('.ad,.you-v'));
-    map.onfocusin = (e) => { const el = e.target.closest('.ad,.you-v'); if (el) show(el); };
-    map.onfocusout = () => show(null);
-  }
-
-  /* ---- 4 · audiences: who they talk to, and who nobody does ---- */
-  function chAud(r) {
-    const syn = r.synthesis || {}, list = syn.audiences || [], names = compNames(r);
-    $('#ch-aud').hidden = !list.length;
-    $('.chapters a[href="#ch-aud"]').hidden = !list.length;
-    if (!list.length) return;
-    const founder = !!(r.icp && r.icp.audiences);
-    const open = list.find(a => a.status === 'open');
-    const rec = syn.recommended_audience;
-    $('#aud-head').innerHTML = open ? 'Nobody is talking to <span class="open-word">' + esc(open.name) + '</span>.' : 'Aim at ' + esc(rec || list[0].name) + '.';
-    $('#aud-sub').textContent = (founder ? 'Your audiences.' : 'Inferred from who each rival ad speaks to.') + ' Bars show how much of each rival’s advertising aims at that audience.';
-    $('#aud').innerHTML = list.map(a => {
-      const target = a.name === rec;
-      return '<article class="aud-row' + (founder ? ' founder' : '') + (target ? ' target' : '') + '">' +
-        '<h3>' + esc(a.name) + ' <span class="status' + (a.status === 'open' ? ' open' : '') + '">' + esc(a.status || 'inferred') + '</span>' + (target ? ' <span class="status">your target</span>' : '') + '</h3>' +
-        (a.who ? '<p>' + esc(a.who) + '</p>' : '') + (a.need ? '<p class="need">Wants: ' + esc(a.need) + '</p>' : '') +
-        '<div class="aud-bars">' + names.map(n => { const v = Math.max(0, Math.min(100, Number((a.share || {})[n]) || 0));
-          return '<div class="abar"><span>' + esc(n) + '</span><span class="track"><i style="width:' + v + '%;background:' + (target ? 'var(--paper)' : compColor(r, n)) + '"></i></span><span class="num">' + Math.round(v) + '%</span></div>'; }).join('') + '</div>' +
-        '</article>';
+    const q = { '-1,-1': 0, '1,-1': 0, '-1,1': 0, '1,1': 0 }; let tot = 0;
+    for (const n of m.rivals) { q[(n.pos.x < 0 ? -1 : 1) + ',' + (n.pos.y < 0 ? -1 : 1)] += W(n.ad); tot += W(n.ad); }
+    const ranked = Object.entries(q).sort((a, b) => b[1] - a[1]);
+    const openK = tot && ranked[3][1] / tot < 0.12 ? ranked[3][0] : null;
+    const qn = (k) => { const [x, y] = k.split(',').map(Number); return (x < 0 ? 'facts' : 'feelings') + ' · ' + (y < 0 ? 'value' : 'premium'); };
+    const quad = (k) => { const [x, y] = k.split(',').map(Number); return '<div class="q' + (openK === k ? ' open' : '') + (y > 0 ? '' : ' b') + (x > 0 ? ' r' : '') + '" style="left:' + (x < 0 ? 0 : 50) + '%;top:' + (y > 0 ? 0 : 50) + '%"><em>' + (openK === k ? 'open ground' : qn(k)) + '</em></div>'; };
+    const vis = m.nodes.filter(n => S.layers[n.kind]);
+    const lines = S.layers.rival ? near.map(({ o, d }) => { const x1 = X(sel.pos.x), y1 = Y(sel.pos.y), x2 = X(o.pos.x), y2 = Y(o.pos.y); return '<i class="ln" style="left:' + x1 + '%;top:' + y1 + '%;width:' + Math.hypot(x2 - x1, y2 - y1) + '%;transform:rotate(' + Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI + 'deg)"></i><span class="dl" style="left:' + (x1 + x2) / 2 + '%;top:' + (y1 + y2) / 2 + '%">' + r2(d) + '</span>'; }).join('') : '';
+    const dots = vis.map(n => {
+      const isSel = n.id === sel.id, isNear = nearIds.has(n.id), dim = !(isSel || isNear || n.kind === 'new');
+      const base = n.kind === 'rival' ? { size: Math.min(26, 10 + Math.sqrt(n.days) * 0.8), r: '50%', bg: colorOf(n.rival), lab: '' } : n.kind === 'post' ? { size: 16, r: '50%', bg: '#0F2036', lab: '' } : { size: 30, r: '5px', bg: '#F5F8FC', lab: n.n };
+      const ring = n.kind === 'post' ? 'inset 0 0 0 3px #37B7C3' : n.kind === 'rival' ? '0 0 0 1.5px #0F2036' : '0 3px 0 #37506E';
+      return '<button class="n" data-act="pick-node" data-id="' + esc(n.id) + '" title="' + esc(n.kind === 'new' ? 'Your new ad ' + n.n : n.hook) + '" style="left:' + X(n.pos.x) + '%;top:' + Y(n.pos.y) + '%;width:' + base.size + 'px;height:' + base.size + 'px;border-radius:' + base.r + ';background:' + base.bg + ';box-shadow:' + (isSel ? ring + ',0 0 0 4px #F5F8FC' : ring) + ';opacity:' + (dim ? 0.38 : 1) + ';z-index:' + (isSel ? 5 : n.kind === 'new' ? 4 : 2) + (n.pos.estimated && n.kind === 'rival' ? ';outline:1.5px dashed #0B192C;outline-offset:-3px' : '') + '">' + base.lab + '</button>';
     }).join('');
-    $('#aud-basis').textContent = founder ? 'You edited these. Dashed would mean inferred.' : 'Dashed: inferred by the AI. Edit them if they’re off.';
-    $('#btn-aud-edit').textContent = 'Edit audiences';
-  }
-  function audEditor(r) {
-    const syn = r.synthesis || {};
-    const list = (r.icp && r.icp.audiences) || (syn.audiences || []).map(a => ({ name: a.name, who: a.who, need: a.need }));
-    const target = (r.icp && r.icp.target) || syn.recommended_audience;
-    const row = (a, i) => '<div class="erow"><input class="name" value="' + esc(a.name) + '" maxlength="40" aria-label="Audience name" placeholder="Audience name">' +
-      '<input class="who" value="' + esc(a.who || '') + '" maxlength="120" aria-label="Who they are" placeholder="Who they are">' +
-      '<input class="need" value="' + esc(a.need || '') + '" maxlength="100" aria-label="What they want" placeholder="What they want">' +
-      '<div class="ctl"><label class="tgt"><input type="radio" name="aud-target"' + (a.name === target ? ' checked' : '') + '> Target this one</label><button type="button" class="linkish" data-rm="' + i + '">Remove</button></div></div>';
-    $('#aud').innerHTML = '<div class="aud-edit">' + list.map(row).join('') + '</div>';
-    $('#aud-basis').innerHTML = '<button type="button" class="linkish" id="aud-add">Add an audience</button> · <button type="button" class="linkish" id="aud-cancel">Cancel</button>' + (r.icp ? ' · <button type="button" class="linkish" id="aud-reset">Back to inferred</button>' : '');
-    $('#btn-aud-edit').textContent = 'Save audiences';
-    const rows = () => $$('.aud-edit .erow');
-    $('#aud-add').onclick = () => { if (rows().length >= 6) return toast('Six audiences is the limit.'); $('.aud-edit').insertAdjacentHTML('beforeend', row({ name: '', who: '', need: '' }, rows().length)); };
-    $('#aud-cancel').onclick = () => { S.audEditing = false; chAud(S.run); };
-    if ($('#aud-reset')) $('#aud-reset').onclick = () => saveAud(null);
-    $('.aud-edit').onclick = (e) => { const b = e.target.closest('[data-rm]'); if (b) b.closest('.erow').remove(); };
-  }
-  async function saveAud(audiences, target) {
-    const b = $('#btn-aud-edit'); b.disabled = true;
-    try {
-      const res = await api('/runs/icp', { body: { id: S.id, audiences, target } });
-      S.run.icp = res.icp; S.pending = res.pending; S.audEditing = false;
-      chAud(S.run); renderChanges();
-      toast(audiences ? 'Saved. Regenerate to aim the ads at them.' : 'Back to the inferred audiences. Regenerate to apply.');
-    } catch (e) { toast(e.message); }
-    b.disabled = false;
-  }
-  $('#btn-aud-edit').addEventListener('click', () => {
-    if (!S.audEditing) { S.audEditing = true; audEditor(S.run); return; }
-    const rows = $$('.aud-edit .erow');
-    const audiences = rows.map(r => ({ name: $('.name', r).value.trim(), who: $('.who', r).value.trim(), need: $('.need', r).value.trim() })).filter(a => a.name);
-    const t = rows.find(r => $('input[type=radio]', r).checked);
-    saveAud(audiences, t ? $('.name', t).value.trim() : null);
-  });
-
-  /* ---- 5 · you vs them ---- */
-  function chYou(r) {
-    const syn = r.synthesis || {}, y = syn.you_vs_them;
-    $('#ch-you').hidden = !y; $('.chapters a[href="#ch-you"]').hidden = !y;
-    if (!y) return;
-    const posts = brandPosts(), ads = keptAds();
-    $('#you-head').textContent = firstSentence(y.gap || y.summary, 170);
-    $('#you-sub').textContent = y.summary || '';
-    const mine = shares(posts), theirs = shares(ads, W);
-    const bar = (label, v, cls, solo) => '<div class="vbar' + (solo ? ' solo' : '') + '"><span>' + esc(label) + '</span><span class="track"><i class="' + cls + '" style="width:' + Math.max(2, v) + '%"></i></span><span class="num">' + Math.round(v) + '%</span></div>';
-    const top = (o) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 6);
-    const left = posts.length ?
-      '<div><h3>Your Instagram, last ' + posts.length + ' posts</h3>' + top(mine).map(([k, v]) => bar(k, v, '', !(theirs[k] > 0.5))).join('') + '</div>' :
-      '<div><h3>What your site leans on</h3><div class="chips">' + (y.you_lean_on || []).map(a => '<span class="chip">' + esc(a) + '</span>').join('') + '</div></div>';
-    const right = '<div><h3>What rivals pay to say</h3>' + top(theirs).map(([k, v]) => bar(k, v, 'theirs')).join('') + '</div>';
-    const only = (y.only_you || []).length ? '<div><h3>Only you</h3><div class="chips">' + y.only_you.map(a => '<span class="chip open">' + esc(a) + '</span>').join('') + '</div></div>' : '';
-    const thumb = (src, label) => '<div class="t"' + (src ? ' style="background-image:url(\'' + esc(String(src).replace(/'/g, '%27')) + '\')"' : '') + '><span class="num">' + esc(label) + '</span></div>';
-    const grids = posts.length ? '<div class="grids"><div><h3>Your grid</h3><div class="grid3">' + posts.slice(0, 6).map(p => thumb(p.image_url, (p.likes != null ? p.likes + ' likes' : esc(p.post_type || '')))).join('') + '</div></div>' +
-      '<div><h3>Their longest-running ads</h3><div class="grid3">' + ads.slice().sort((a, b) => (b.days_running || 0) - (a.days_running || 0)).slice(0, 6).map(a => thumb(a.image_url, (a.days_running || 0) + 'd')).join('') + '</div></div></div>' :
-      '<p class="basis">' + (r.ig && r.ig.state === 'done' && !posts.length ? 'Instagram came back empty for @' + esc(r.ig.brand || '') + '. ' : '') + 'Compared from your website. Add your Instagram handle on the next run to compare your grid against their ads.</p>';
-    $('#you').innerHTML = '<div class="vs">' + left + right + '</div>' + only + grids;
+    let verdict, vw;
+    if (sel.kind === 'rival') { const d = near[0] ? near[0].d : 9; vw = distWord(d); verdict = d < 0.35 ? 'Nearly identical to another rival ad.' : 'Sits apart from most rival ads.'; }
+    else { const d = near[0] ? near[0].d : 9; vw = distWord(d); verdict = r2(d) + ' from the nearest rival ad: ' + vw[0] + '.'; }
+    const kind = sel.kind === 'rival' ? (sel.rival.toUpperCase() + ' AD · ' + sel.days + ' DAYS') : sel.kind === 'post' ? 'YOUR INSTAGRAM POST' : 'YOUR NEW AD ' + sel.n;
+    // group distances
+    const cent = names.map(n => { const as = m.rivals.filter(x => x.rival === n); const w = as.reduce((s, a) => s + W(a.ad), 0) || 1; return { n, k: as.length, p: { x: as.reduce((s, a) => s + a.pos.x * W(a.ad), 0) / w, y: as.reduce((s, a) => s + a.pos.y * W(a.ad), 0) / w } }; }).filter(c => c.k);
+    const gd = [];
+    for (let i = 0; i < cent.length; i++) for (let j = i + 1; j < cent.length; j++) gd.push([cent[i].n + ' ↔ ' + cent[j].n, dist(cent[i].p, cent[j].p)]);
+    const postN = m.nodes.filter(n => n.kind === 'post'), newN = m.nodes.filter(n => n.kind === 'new');
+    if (postN.length) gd.push(['Your posts ↔ nearest rival ad', avg(postN.map(p => m.nearest(p, 1)[0].d))]);
+    if (newN.length) gd.push(['Your new ads ↔ nearest rival ad', avg(newN.map(p => m.nearest(p, 1)[0].d))]);
+    const est = m.rivals.filter(n => n.pos.estimated).length;
+    const layers = [['rival', 'Rival ads', '#F7862A', '50%', 'none'], ['post', 'Your posts', 'transparent', '50%', 'inset 0 0 0 2px #37B7C3'], ['new', 'Your new ads', '#F5F8FC', '2px', 'inset 0 0 0 2px #0B192C']].filter(l => l[0] !== 'post' || postN.length);
+    return '<section class="pane"><div class="pane-h"><h2>' + (openK ? 'how far apart everyone really is.' : 'how far apart everyone really is.') + '</h2><p>Every ad and post is a dot. Close dots say the same thing (hook, angle, offer, audience). Far dots don’t. Tap any dot to see its nearest neighbours.' + (openK ? ' The ' + qn(openK) + ' corner is open.' : '') + '</p></div>' +
+      '<div class="row">' + layers.map(([k, l, c, rad, ring]) => '<button class="pill' + (S.layers[k] ? ' on' : '') + '" data-act="layer" data-k="' + k + '"><i style="width:10px;height:10px;border-radius:' + rad + ';background:' + c + ';box-shadow:' + ring + '"></i>' + l + '</button>').join('') + '</div>' +
+      '<div class="mapwrap"><div class="map">' + Object.keys(q).map(quad).join('') +
+        '<span class="ax" style="left:10px;top:50%;transform:translateY(-50%)">RATIONAL</span><span class="ax" style="right:10px;top:50%;transform:translateY(-50%)">EMOTIONAL</span><span class="ax" style="left:50%;top:8px;transform:translateX(-50%)">PREMIUM-LED</span><span class="ax" style="left:50%;bottom:22px;transform:translateX(-50%)">VALUE-LED</span>' +
+        lines + dots + '</div>' +
+      '<aside style="display:flex;flex-direction:column;gap:14px"><div class="sidec"><p class="px s">' + esc(kind) + '</p><h3>' + esc(sel.kind === 'new' ? sel.hook : '“' + sel.hook + '”') + '</h3><p style="font-size:14px;color:var(--mute)">' + (sel.kind === 'post' ? 'From your last posts' : 'Angle: ' + esc(sel.angle || '')) + '</p>' +
+        '<div class="verdict" style="background:' + vw[1] + '">' + esc(verdict) + '</div><p class="px s" style="margin-top:4px">NEAREST RIVAL ADS</p>' +
+        near.map(({ o, d }) => '<button class="near" data-act="pick-node" data-id="' + esc(o.id) + '"><span style="font-size:14px"><i style="background:' + colorOf(o.rival) + '"></i>“' + esc(firstSentence(o.hook, 70)) + '”</span><span class="px y">' + r2(d) + '</span></button>').join('') + '</div>' +
+      '<div class="sidec" style="gap:10px"><p class="px s">GROUP DISTANCES</p>' + gd.map(([k, d]) => { const w = distWord(d); return '<div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><span style="font-size:14px">' + esc(k) + '<span style="display:block;font-size:12px;color:' + w[1] + '">' + w[0] + '</span></span><b class="y" style="font:10px \'Press Start 2P\',monospace">' + r2(d) + '</b></div>'; }).join('') + '<p style="font-size:12px;color:var(--dim)">0 = same message · 2.8 = opposite corners. Positions are AI estimates' + (est ? '; dashed dots are placed from the ad’s angle' : '') + '.</p></div></aside></div>' +
+      '<div class="nextrow"><button class="btn paper" data-act="tab" data-k="ads">Next: your three ads →</button></div></section>';
   }
 
-  /* ---- 6 · your three ads ---- */
-  function variantCard(v, r) {
-    const brand = brandName(r);
-    const insp = v.inspired_by || {};
-    const src = adById(insp.ad_id);
-    const longText = (v.primary_text || '').length > 140;
-    return '<article class="card" data-idx="' + v.idx + '" aria-label="Ad ' + (v.idx + 1) + ': ' + esc(v.angle) + '">' +
-      '<div class="card-head"><h3>' + esc(v.angle) + '</h3><span class="num">ad ' + (v.idx + 1) + (v.version > 1 ? ' · v' + v.version : '') + '</span></div>' +
-      '<div class="ig">' +
-        '<div class="ig-top"><div class="ig-av">' + esc(brand.charAt(0).toUpperCase()) + '</div><div><b>' + esc(brand) + '</b><small>Sponsored</small></div></div>' +
-        '<div class="ig-text' + (longText ? ' clamp' : '') + '">' + marks(v.primary_text) + '</div>' +
-        (longText ? '<button type="button" class="ig-more">… more</button>' : '') +
-        '<div class="creative"><div class="hook">' + esc(v.format) + ' · ' + esc(v.placement) + '</div><h4>' + marks(v.overlay_text || v.headline) + '</h4></div>' +
-        '<div class="ig-bar"><div><b>' + marks(v.headline) + '</b><small>' + marks(v.description) + '</small></div><span class="ig-cta">' + esc(v.cta) + '</span></div>' +
-      '</div>' +
-      '<div class="meta">' +
-        '<div class="tagrow">' + (v.audience ? '<span class="tag hot">for ' + esc(v.audience) + '</span>' : '') + (v.hook_type ? '<span class="tag">' + esc(v.hook_type) + ' hook</span>' : '') + '</div>' +
-        (v.why_this_angle ? '<p class="why">' + esc(v.why_this_angle) + '</p>' : '') +
-        '<div class="dir"><b>Creative direction</b>' + esc(v.creative_direction) + '</div>' +
-        (insp.competitor ? '<div class="stats">Structure borrowed from ' + esc(insp.competitor) + (src ? ', an ad running <b>' + (src.days_running || 0) + ' days</b>' : '') + (insp.what_we_borrowed ? '. ' + esc(insp.what_we_borrowed) : '') + '</div>' : '') +
-        '<div class="actions"><button class="go" data-act="copy">Copy</button><button data-act="tweak" aria-expanded="false">Tweak</button><span class="soon">You review, then paste into Ads Manager. Metacrok never touches your ad account.</span></div>' +
-        '<div class="tweak"><div class="presets">' + ['shorter', 'more aggressive', 'more playful', 'more premium', 'add urgency'].map(p => '<button type="button" data-preset="' + p + '">' + p + '</button>').join('') + '</div>' +
-        '<form><input maxlength="240" placeholder="or type it: make it about the 10% serum" aria-label="Tweak instruction"><button>Go</button></form></div>' +
-      '</div></article>';
+  /* ---- Ads ---- */
+  function tabAds() {
+    const r = S.run, vars = r.variants || [], v = vars[S.sel];
+    if (!v) return '<section class="pane"><div class="pane-h"><h2>your ads.</h2><p>No ads were written for this run.</p></div></section>';
+    const m = mapModel(), nodeV = m.nodes.find(n => n.id === 'n' + v.idx), nr = nodeV ? m.nearest(nodeV, 1)[0] : null, insp = v.inspired_by || {};
+    const src = S.ads.find(a => a.id === insp.ad_id);
+    const brand = brandName(), handle = (r.input.brand.ig || brand).replace(/^@/, '').replace(/\s+/g, '').toLowerCase();
+    const fields = [['Primary text', v.primary_text, 300], ['Headline', v.headline, 40], ['Description', v.description, 30], ['Button', v.cta, 0]];
+    const w = nr ? distWord(nr.d) : null;
+    return '<section class="pane"><div class="pane-h"><h2>three ads for the open space.</h2><p><mark class="ph">[Brackets]</mark> are yours to fill. We never invent ratings, offers or stories. Review, then paste into Ads Manager.</p></div>' +
+      '<div class="grid-auto">' + vars.map((x, i) => '<button class="vbtn' + (i === S.sel ? ' on' : '') + '" data-act="sel-var" data-i="' + i + '"><div class="vhead"><span class="px y">AD ' + (x.idx + 1) + ' · V' + (x.version || 1) + '</span><span style="font:600 13px \'Funnel Sans\',sans-serif;color:var(--soft)">' + esc(x.angle) + '</span></div>' +
+        '<div class="fb"><div class="who"><i></i><div><b>' + esc(handle) + '</b><small>Sponsored</small></div></div><p class="pt">' + esc(String(x.primary_text || '').replace(/\[([^\]]+)\]/g, '[$1]')) + '</p><div class="art" style="background:' + ART[(x.idx + (x.angle || '').length) % ART.length] + '">' + esc(x.overlay_text || x.headline) + '</div>' +
+        '<div class="bar"><div style="min-width:0"><b>' + esc(x.headline) + '</b><span class="d">' + esc(x.description) + '</span></div><span class="cta">' + esc(x.cta) + '</span></div></div></button>').join('') + '</div>' +
+      '<div class="detail"><div class="col-g"><div class="row" style="align-items:center;gap:12px"><span class="px y">AD ' + (v.idx + 1) + '</span><h3 class="disp" style="font-size:30px;line-height:1;font-weight:800">' + esc(v.angle) + '</h3>' + (v.audience ? '<span style="font:600 12px \'Funnel Sans\',sans-serif;padding:4px 10px;border-radius:4px;background:var(--paper);color:var(--night)">for ' + esc(v.audience) + '</span>' : '') + '</div>' +
+        fields.map(([l, t, max], i) => '<div class="field"><div class="fh"><span>' + l + (max ? ' <span class="px8" style="color:' + (String(t || '').length > max ? 'var(--red)' : 'var(--dim)') + ';margin-left:6px">' + String(t || '').length + '/' + max + '</span>' : '') + '</span><button class="btn mid sm" data-act="copy-field" data-i="' + i + '" style="height:32px">Copy</button></div><p>' + ph(t) + '</p></div>').join('') +
+        '<button class="btn sm" style="align-self:flex-start;height:40px" data-act="copy-all">Copy the whole ad</button></div>' +
+      '<div class="col-g" style="gap:18px">' +
+        (v.why_this_angle ? '<div><p class="lab">WHY THIS ANGLE</p><p style="color:var(--soft)">' + esc(v.why_this_angle) + '</p></div>' : '') +
+        '<div><p class="lab">CREATIVE DIRECTION</p><p style="color:var(--soft)">' + esc(v.creative_direction) + '</p></div>' +
+        (insp.competitor ? '<div class="dash">Structure borrowed from <b style="color:var(--paper)">' + esc(insp.competitor) + (src ? ', an ad running ' + (src.days_running || 0) + ' days' : '') + '</b>. Words are ours.' + (insp.what_we_borrowed ? ' ' + esc(insp.what_we_borrowed) : '') + '</div>' : '') +
+        (nr ? '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:8px;background:var(--night)"><span style="font-size:14px;color:var(--soft)">Nearest rival ad <b class="y" style="font:10px \'Press Start 2P\',monospace;margin:0 6px">' + r2(nr.d) + '</b> away · <b style="color:' + w[1] + '">' + w[0] + '</b></span><button class="btn teal sm" style="height:34px" data-act="see-map" data-id="n' + v.idx + '">See on map</button></div>' : '') +
+        '<div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:16px"><p class="px s">TWEAK THIS AD</p><div class="row">' + ['shorter', 'punchier hook', 'more playful', 'for retargeting'].map(p => '<button class="pill" style="height:34px;padding:0 12px;font-size:13px" data-act="preset" data-v="' + p + '">' + p + '</button>').join('') + '</div>' +
+        '<div style="display:flex;gap:8px"><input class="in" id="tweak-in" style="height:46px;font-size:15px" maxlength="240" value="' + esc(S.tweak) + '" placeholder="e.g. mention it’s fragrance-free"><button class="btn" data-act="rewrite">Rewrite</button></div><p style="font-size:13px;color:var(--mute)">Rewrites only this ad. Earlier versions are kept.</p></div></div></div>' +
+      '</section>';
   }
 
-  function copyText(v) {
-    return [v.primary_text, '', 'Headline: ' + v.headline, 'Description: ' + v.description, 'CTA: ' + v.cta, '', 'Creative: ' + v.creative_direction, 'Text on image: ' + (v.overlay_text || ''), 'Angle: ' + v.angle].join('\n');
+  /* ---- Eaten ---- */
+  function tabEaten() {
+    const names = runNames(), all = S.ads.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0));
+    const list = all.filter(a => S.filter === 'All' || a.competitor === S.filter);
+    return '<section class="pane"><div class="pane-h"><h2>every ad he ate.</h2><p>Longest-running first. Don’t trust a read? Set an ad aside or fix it. Nothing changes until you regenerate.</p></div>' +
+      '<div class="row">' + ['All', ...names].map(f => '<button class="pill' + (S.filter === f ? ' on' : '') + '" data-act="filter" data-v="' + esc(f) + '">' + esc(f) + '</button>').join('') + '</div>' +
+      '<div class="eaten">' + list.map(a => {
+        const an = a.analysis || {}, fix = a.correction, angle = (fix && fix.angle) || an.angle, why = (fix && fix.note) || an.why_it_works;
+        return '<article class="ead' + (a.excluded ? ' off' : '') + '"><div class="im"' + (a.image_url ? ' style="background-image:url(\'' + esc(String(a.image_url).replace(/'/g, '%27')) + '\')"' : '') + '>' + (a.image_url ? '' : '<span>' + esc(firstSentence(a.headline || a.body || '', 80)) + '</span>') + '<span class="days">' + (a.days_running || 0) + 'D' + (a.variants > 1 ? ' · ' + a.variants + 'V' : '') + '</span></div>' +
+          '<div class="bd"><span><i style="background:' + colorOf(a.competitor) + '"></i>' + esc(a.competitor) + ' · <b style="color:' + (fix ? 'var(--mint)' : 'var(--paper)') + '">' + esc(angle || '') + '</b>' + (a.excluded ? ' · set aside' : '') + '</span>' +
+          '<b>“' + esc(hookOf(a)) + '”</b><p>' + esc(why || '') + '</p>' +
+          (a.ad_library_url ? '<a href="' + esc(a.ad_library_url) + '" target="_blank" rel="noopener" style="font-size:13px;color:var(--sky)">View ad ↗</a>' : '') +
+          '<div class="row" style="margin-top:6px"><button class="btn ghost sm" data-act="aside" data-id="' + esc(a.id) + '">' + (a.excluded ? 'Restore' : 'Set aside') + '</button>' + (a.excluded ? '' : '<button class="btn ghost sm" data-act="fix" data-id="' + esc(a.id) + '">Wrong read?</button>') + (fix ? '<button class="btn ghost sm" data-act="unfix" data-id="' + esc(a.id) + '">Undo fix</button>' : '') + '</div></div></article>';
+      }).join('') + '</div></section>';
   }
 
-  function bindCards() {
-    $$('#cards .card').forEach(w => {
-      if (w.dataset.bound) return; w.dataset.bound = '1';
-      const idx = Number(w.dataset.idx);
-      const get = () => S.run.variants.find(v => v.idx === idx);
-      const more = $('.ig-more', w);
-      if (more) more.addEventListener('click', () => { $('.ig-text', w).classList.remove('clamp'); more.remove(); });
-      $('[data-act="copy"]', w).addEventListener('click', async () => {
-        const txt = copyText(get());
-        try { await navigator.clipboard.writeText(txt); } catch (_) {
-          const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-        }
-        toast('Copied. Paste it into Ads Manager.');
-      });
-      const tb = $('[data-act="tweak"]', w), panel = $('.tweak', w);
-      tb.addEventListener('click', () => { const o = panel.classList.toggle('open'); tb.setAttribute('aria-expanded', String(o)); });
-      const run = async (instruction) => {
-        if (!instruction) return;
-        w.classList.add('busy');
-        try {
-          const nv = await api('/tweak', { body: { run_id: S.id, idx, instruction } });
-          const i = S.run.variants.findIndex(v => v.idx === idx); S.run.variants[i] = nv;
-          const tmp = document.createElement('div'); tmp.innerHTML = variantCard(nv, S.run);
-          w.replaceWith(tmp.firstChild); bindCards();
-          toast('Spat out v' + nv.version + ' (' + usd(nv.cost_usd) + ')');
-          refreshCost();
-        } catch (e) { toast(e.message); w.classList.remove('busy'); }
-      };
-      $$('[data-preset]', panel).forEach(b => b.addEventListener('click', () => run(b.dataset.preset)));
-      $('form', panel).addEventListener('submit', (e) => { e.preventDefault(); run($('input', panel).value.trim()); });
-    });
+  /* ================= modals ================= */
+  const modal = $('#modal');
+  const closeModal = () => { modal.innerHTML = ''; M.kind = null; };
+  const M = { kind: null, id: null, angle: '', note: '', target: '' };
+  function fixModal(id) {
+    const a = S.ads.find(x => x.id === id); if (!a) return;
+    M.kind = 'fix'; M.id = id; M.angle = (a.correction && a.correction.angle) || angleOf(a) || ''; M.note = (a.correction && a.correction.note) || '';
+    modal.innerHTML = '<div class="modal" data-act="close-modal"><div data-stop="1"><div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div><p class="px s">FIX THE READ</p><h3>“' + esc(hookOf(a)) + '”</h3><p style="font-size:14px;color:var(--mute);margin-top:4px">' + esc(a.competitor) + ' · read as <b>' + esc((a.analysis || {}).angle || '') + '</b></p></div><button class="x" data-act="close-modal" aria-label="Close">×</button></div>' +
+      '<div><p style="font:600 14px \'Funnel Sans\',sans-serif;color:var(--soft);margin-bottom:8px">What angle is it really?</p><div class="row" id="fix-angles">' + (S.angles || []).map(x => '<button class="pill' + (M.angle === x ? ' on' : '') + '" style="height:36px;padding:0 12px;font-size:13px" data-act="fix-angle" data-v="' + esc(x) + '">' + esc(x) + '</button>').join('') + '</div></div>' +
+      '<label class="fld"><span>What does it actually do? <span style="color:var(--mute);font-weight:400">optional</span></span><textarea class="in" id="fix-note" rows="2" maxlength="200" placeholder="It’s really a launch teaser, not an offer">' + esc(M.note) + '</textarea></label>' +
+      '<div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="close-modal">Cancel</button><button class="btn" data-act="save-fix">Save fix</button></div></div></div>';
+  }
+  function audRow(a, i, target) {
+    return '<div class="erow"><input class="in n" value="' + esc(a.name) + '" maxlength="40" aria-label="Audience name" placeholder="Audience name"><input class="in w" value="' + esc(a.who || '') + '" maxlength="120" aria-label="Who they are" placeholder="Who they are"><input class="in d" value="' + esc(a.need || '') + '" maxlength="100" aria-label="What they want" placeholder="What they want">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="radio" name="aud-t"' + (a.name && a.name === target ? ' checked' : '') + '> Target this one</label><button class="link" data-act="aud-rm">Remove</button></div></div>';
+  }
+  function audModal() {
+    const r = S.run, list = (r.icp && r.icp.audiences) || auds().map(a => ({ name: a.name, who: a.who, need: a.need })), target = targetName();
+    M.kind = 'aud';
+    modal.innerHTML = '<div class="modal" data-act="close-modal"><div data-stop="1"><div style="display:flex;justify-content:space-between;align-items:start;gap:12px"><div><p class="px s">YOUR AUDIENCES</p><h3>Who are the ads for?</h3><p style="font-size:14px;color:var(--mute);margin-top:4px">Replace the inferred audiences with your own and pick one to aim at. Takes effect when you regenerate.</p></div><button class="x" data-act="close-modal" aria-label="Close">×</button></div>' +
+      '<div id="aud-list" style="display:flex;flex-direction:column;gap:10px">' + list.map((a, i) => audRow(a, i, target)).join('') + '</div>' +
+      '<div class="row" style="justify-content:space-between;align-items:center"><div class="row"><button class="link" data-act="aud-add">Add an audience</button>' + (r.icp ? '<button class="link" data-act="aud-reset">Back to inferred</button>' : '') + '</div><div class="row"><button class="btn ghost" data-act="close-modal">Cancel</button><button class="btn" data-act="aud-save">Save audiences</button></div></div></div></div>';
   }
 
-  function renderResults(r) {
-    $('#results').dataset.rendered = '1';
-    $('#results').hidden = false;
-    $('#run').classList.add('finished');
-    setStep('fresh');
-    S.igPosts = r.ig_posts || S.igPosts || [];
-    chVerdict(r); chLoud(r); chMap(r); chAud(r); chYou(r);
-    // a long finding steps down a size so it never runs past five lines
-    $$('.find').forEach(h => h.classList.toggle('long', h.textContent.length > 95));
-    $('#cards').innerHTML = r.variants.map(v => variantCard(v, r)).join('');
-    bindCards();
-    renderAdsGrid();
-    watchSubnav();
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }
-
-  /* ---- the founder's say over what the gator ate: set an ad aside, or fix its read ---- */
-  function renderAdsGrid() {
-    const all = (S.ads || []).slice().sort((a, b) => (b.weight || 0) - (a.weight || 0));
-    const kept = all.filter(a => !a.excluded).length;
-    $('#ads-count').textContent = kept + ' ads · longest-running first' + (all.length > kept ? ' · ' + (all.length - kept) + ' set aside' : '');
-    $('#ads').innerHTML = all.map(a => {
-      const an = a.analysis || {}, fix = a.correction || null;
-      const angle = (fix && fix.angle) || an.angle, why = (fix && fix.note) || an.why_it_works;
-      const th = a.image_url ?
-        '<img src="' + esc(a.image_url) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' :
-        '<span class="seedtxt">' + esc(a.headline || '') + '</span>';
-      const opts = '<option value="">Keep this angle</option>' + (S.angles || []).map(x => '<option' + (fix && fix.angle === x ? ' selected' : '') + '>' + esc(x) + '</option>').join('');
-      const ctl = a.excluded ? '<button type="button" data-ctl="restore">Restore</button>' :
-        '<button type="button" data-ctl="exclude">Set aside</button><button type="button" data-ctl="fix">Wrong read?</button>' + (fix ? '<button type="button" data-ctl="clear">Undo fix</button>' : '');
-      return '<article class="ad' + (a.excluded ? ' off' : '') + '" data-ad="' + esc(a.id) + '"><div class="th" style="' + (a.image_url ? '' : thumbStyle(a)) + '">' + th +
-        '<span class="days' + ((a.days_running || 0) >= 60 ? ' hot' : '') + '">' + (a.days_running || 0) + 'd' + (a.variants > 1 ? ' · ' + a.variants + 'v' : '') + '</span></div>' +
-        '<div class="bd"><div class="who">' + esc(a.competitor) + (angle ? ' · ' + esc(angle) : '') + (a.excluded ? ' · set aside' : '') + '</div>' +
-        (an.hook ? '<b>“' + esc(an.hook.line) + '”</b>' : '<b>' + esc(a.headline) + '</b>') +
-        (why ? '<span class="why">' + esc(why) + '</span>' : '') +
-        (fix ? '<span class="fixed">corrected by you</span>' : '') +
-        (a.ad_library_url ? '<a href="' + esc(a.ad_library_url) + '" target="_blank" rel="noopener">View ad ↗</a>' : '') +
-        '<div class="ctl">' + ctl + '</div>' +
-        '<form class="fixf" hidden><select name="angle" aria-label="Angle">' + opts + '</select><input name="note" maxlength="200" placeholder="What the ad actually does (optional)" value="' + esc((fix && fix.note) || '') + '"><button>Save fix</button></form>' +
-        '</div></article>';
-    }).join('');
-    renderChanges();
-  }
-
-  // one bar for every pending change: ads set aside, reads fixed, audiences edited
-  function renderChanges() {
-    const n = S.pending || 0;
-    $('#changes').hidden = !n;
-    $('#changes-n').textContent = n + ' change' + (n === 1 ? '' : 's');
-  }
-
-  async function control(id, action, extra, btn) {
-    if (btn) btn.disabled = true;
+  /* ================= actions ================= */
+  async function control(id, action, extra) {
     try {
       const r = await api('/runs/control', { body: { run_id: S.id, ad_id: id, action, ...extra } });
-      const a = adById(id);
-      if (a) { a.excluded = r.excluded; a.correction = r.correction; }
-      S.pending = r.pending;
-      renderAdsGrid();
-    } catch (e) { toast(e.message); if (btn) btn.disabled = false; }
+      const a = S.ads.find(x => x.id === id); if (a) { a.excluded = r.excluded; a.correction = r.correction; }
+      S.pending = r.pending; return true;
+    } catch (e) { toast(e.message); return false; }
   }
-
-  $('#ads').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-ctl]'); if (!b) return;
-    const card = b.closest('.ad'), id = card.dataset.ad, kind = b.dataset.ctl;
-    if (kind === 'fix') { const f = $('.fixf', card); f.hidden = !f.hidden; return; }
-    control(id, kind, {}, b); // exclude | restore | clear
-  });
-  $('#ads').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const f = e.target, card = f.closest('.ad');
-    control(card.dataset.ad, 'correct', { angle: f.angle.value, note: f.note.value.trim() }, $('button', f));
-  });
-  $('#btn-regen').addEventListener('click', async () => {
-    const b = $('#btn-regen'); b.disabled = true;
-    try {
-      await api('/runs/regenerate', { body: { id: S.id } });
-      S.pending = 0;
-      openRun(S.id, true);
-    } catch (e) { toast(e.message); }
-    b.disabled = false;
-  });
-
-  // the chapter you are reading is the last one whose top has passed under the rail
-  function watchSubnav() {
-    const links = $$('.chapters a').filter(a => !a.hidden);
-    const pairs = links.map(a => [a, document.querySelector(a.getAttribute('href'))]).filter(p => p[1]);
-    let current = null;
-    const update = () => {
-      const line = $('.chapters').getBoundingClientRect().bottom + 24;
-      let on = pairs[0];
-      for (const p of pairs) if (p[1].getBoundingClientRect().top <= line) on = p;
-      if (on && on[0] !== current) {
-        current = on[0];
-        links.forEach(a => a.classList.toggle('on', a === current));
-        const rail = $('.chapters');
-        rail.scrollTo({ left: current.offsetLeft - rail.clientWidth / 2 + current.clientWidth / 2, behavior: 'smooth' });
+  async function act(name, el, ev) {
+    const d = el.dataset;
+    switch (name) {
+      case 'go': if (d.k === 'feed') return showFeed(); if (d.k === 'results' && S.run && S.run.status === 'done') return showResults(); if (d.k === 'chew' && S.id) return; return;
+      case 'add-rival': if (addRival(F.rivalInput)) F.rivalInput = ''; return showFeed();
+      case 'rm-rival': F.rivals.splice(Number(d.i), 1); return showFeed();
+      case 'suggest': return suggest();
+      case 'pick-sug': { const c = F.sug[Number(d.i)], at = F.rivals.findIndex(r => r.name.toLowerCase() === c.name.toLowerCase()); if (at >= 0) F.rivals.splice(at, 1); else if (!addRival(c.name, c.instagram || c.website || '')) toast('Three rivals is the limit. Remove one first.'); return showFeed(); }
+      case 'goal': F.goal = d.v; return showFeed();
+      case 'demo': Object.assign(F, { name: 'Acme Glow', url: '', ig: '', rivals: ['glowritual', 'dewdrift', 'barebae'].map(n => ({ name: n, hint: '' })), demo: true, error: '' }); toast('Demo brands loaded (fictional skincare pack)'); return showFeed();
+      case 'live': F.demo = false; return showFeed();
+      case 'feed': return feed();
+      case 'retry-live': { const p = { ...(S.lastPayload || payload()), mode: 'auto' }; try { await startRun(p); } catch (e) { toast(e.message); } return; }
+      case 'retry-demo': { const p = { ...(S.lastPayload || payload()), mode: 'seed' }; if (!p.competitors || !p.competitors.length) p.competitors = ['glowritual', 'dewdrift', 'barebae'].map(n => ({ name: n, hint: '' })); try { await startRun(p); } catch (e) { toast(e.message); } return; }
+      case 'share': return copy(location.href, 'Share link copied');
+      case 'tab': S.tab = d.k; return rerender(true);
+      case 'sel-var': S.sel = Number(d.i); return rerender();
+      case 'see-map': S.mapSel = d.id; S.tab = 'map'; return rerender(true);
+      case 'pick-node': S.mapSel = d.id; return rerender();
+      case 'layer': S.layers[d.k] = !S.layers[d.k]; return rerender();
+      case 'filter': S.filter = d.v; return rerender();
+      case 'preset': S.tweak = d.v; return rerender();
+      case 'copy-field': { const v = S.run.variants[S.sel], f = [v.primary_text, v.headline, v.description, v.cta][Number(d.i)]; return copy(f, 'Copied'); }
+      case 'copy-all': { const v = S.run.variants[S.sel]; return copy([v.primary_text, '', 'Headline: ' + v.headline, 'Description: ' + v.description, 'CTA: ' + v.cta, '', 'Creative: ' + v.creative_direction, 'Text on image: ' + (v.overlay_text || ''), 'Angle: ' + v.angle].join('\n'), 'Copied. Paste it into Ads Manager.'); }
+      case 'rewrite': {
+        const inp = $('#tweak-in'), text = ((inp && inp.value) || S.tweak).trim(); if (!text) return toast('Say how to change it first');
+        el.disabled = true; el.textContent = 'Rewriting…';
+        try { const nv = await api('/tweak', { body: { run_id: S.id, idx: S.sel, instruction: text } }); const i = S.run.variants.findIndex(v => v.idx === S.sel); S.run.variants[i] = { ...S.run.variants[i], ...nv }; S.tweak = ''; toast('Ad ' + (S.sel + 1) + ' rewritten · v' + nv.version); }
+        catch (e) { toast(e.message); }
+        return rerender();
       }
-    };
-    window.removeEventListener('scroll', watchSubnav._f);
-    watchSubnav._f = () => { if (!watchSubnav._raf) watchSubnav._raf = requestAnimationFrame(() => { watchSubnav._raf = 0; update(); }); };
-    window.addEventListener('scroll', watchSubnav._f, { passive: true });
-    window.addEventListener('scrollend', update);
-    update();
+      case 'aside': { const a = S.ads.find(x => x.id === d.id); el.disabled = true; if (await control(d.id, a && a.excluded ? 'restore' : 'exclude')) { rerender(); renderFloat(); } else el.disabled = false; return; }
+      case 'unfix': if (await control(d.id, 'clear')) rerender(); return;
+      case 'fix': return fixModal(d.id);
+      case 'fix-angle': M.angle = d.v; $$('#fix-angles .pill').forEach(b => b.classList.toggle('on', b.dataset.v === M.angle)); return;
+      case 'save-fix': { const note = ($('#fix-note').value || '').trim(); if (!M.angle && !note) return toast('Pick an angle or say what the ad does.'); const id = M.id; closeModal(); if (await control(id, 'correct', { angle: M.angle, note })) { toast('Fix saved'); rerender(); } return; }
+      case 'close-modal': if (ev.target.closest('[data-stop]') && !el.classList.contains('x') && el.tagName !== 'BUTTON') return; return closeModal();
+      case 'edit-aud': return audModal();
+      case 'aud-add': { const l = $('#aud-list'); if ($$('.erow', l).length >= 6) return toast('Six audiences is the limit.'); l.insertAdjacentHTML('beforeend', audRow({ name: '' }, 0, '')); return; }
+      case 'aud-rm': el.closest('.erow').remove(); return;
+      case 'aud-reset': return saveAud(null);
+      case 'aud-save': { const rows = $$('#aud-list .erow'); const list = rows.map(r => ({ name: $('.n', r).value.trim(), who: $('.w', r).value.trim(), need: $('.d', r).value.trim() })).filter(a => a.name); const t = rows.find(r => $('input[type=radio]', r).checked); if (!list.length) return toast('Add at least one audience.'); return saveAud(list, t ? $('.n', t).value.trim() : null); }
+      case 'regen': { el.disabled = true; try { await api('/runs/regenerate', { body: { id: S.id } }); S.pending = 0; renderFloat(); S.tab = 'ads'; openRun(S.id, true); } catch (e) { toast(e.message); el.disabled = false; } return; }
+    }
+  }
+  async function saveAud(audiences, target) {
+    try {
+      const res = await api('/runs/icp', { body: { id: S.id, audiences, target } });
+      S.run.icp = res.icp; S.pending = res.pending; closeModal(); rerender();
+      toast(audiences ? 'Saved. Regenerate to aim the ads at them.' : 'Back to the inferred audiences. Regenerate to apply.');
+    } catch (e) { toast(e.message); }
   }
 
-  $('#lead').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try { await api('/lead', { body: { email: $('#lead-email').value, run_id: S.id } }); $('#lead-msg').textContent = 'Got it. He’ll be in touch.'; $('#lead').hidden = true; }
-    catch (err) { $('#lead-msg').textContent = err.message; }
+  /* ---------------- events ---------------- */
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    if (b.classList.contains('modal') && e.target !== b) return; // backdrop click only
+    if (b.disabled) return;
+    act(b.dataset.act, b, e);
   });
-
-  /* ================= dev console ================= */
-  function renderCost(r) {
-    const c = r.cost || {};
-    const btn = $('#dev-toggle'); btn.hidden = !DEV; // a developer readout: hidden unless ?dev=1 or localStorage metacrok-dev=1
-    btn.textContent = usd(c.total_usd, 3) + ' this run';
-    const row = (label, b, extra) => b ? '<tr><td>' + label + (b.model ? '<br><small>' + esc(b.model) + '</small>' : '') + '</td><td>' + (b.calls || '–') + '</td><td>' + ((b.in || 0) + (b.out || 0)).toLocaleString() + '</td><td>' + usd(b.usd) + '</td></tr>' + (extra || '') : '';
-    const pull = c.pull, an = c.analysis || {};
-    const readAds = Math.max(1, (S.ads || []).length - (an.cached || 0));
-    const perAd = an.usd ? an.usd / readAds : null;
-    const scale = perAd != null ? (45 * perAd + (c.synthesis ? c.synthesis.usd : 0) + (c.generation ? c.generation.usd : 0) + (c.brand ? c.brand.usd : 0) + 45 * 0.75 / 1000) : null;
-    const t = c.timings || {};
-    $('#dev-body').innerHTML =
-      '<table><tr><th>step</th><th>calls</th><th>tokens</th><th>usd</th></tr>' +
-      row('brand read', c.brand) +
-      (pull ? '<tr><td>ad pull<br><small>' + esc(pull.source === 'apify' ? (pull.actor || 'apify') + ' · ' + pull.ads + ' ads' : 'seed (no scrape)') + '</small></td><td>1</td><td>' + (pull.ads || 0) + ' ads</td><td>' + usd(pull.usd) + '</td></tr>' : '') +
-      row('vision read', c.analysis, an.cached ? '<tr><td colspan="4"><small>' + an.cached + ' ads from cache ($0) · ' + (an.images || 0) + ' images sent</small></td></tr>' : '') +
-      (c.instagram ? '<tr><td>instagram pull</td><td>1</td><td>posts</td><td>' + usd(c.instagram.usd) + '</td></tr>' : '') +
-      row('synthesis', c.synthesis) + row('generation', c.generation) + row('tweaks', c.tweaks) +
-      '<tr class="tot"><td>total</td><td></td><td></td><td>' + usd(c.total_usd) + '</td></tr></table>' +
-      (perAd != null ? '<p>Vision read ≈ <b>' + usd(perAd, 5) + '</b> per ad. A full live run (3 × 15 ads) costs about <b>' + usd(scale, 3) + '</b>.</p>' : '') +
-      (Object.keys(t).length ? '<p><small>Timeline: ' + Object.entries(t).map(([k, v]) => k + ' ' + v + 's').join(' → ') + '</small></p>' : '') +
-      '<p><small>Metered API cost where available. Each ad is analysed once, then cached. <a href="' + API + '/runs/get?id=' + esc(r.id) + '&ads=1" target="_blank" rel="noopener">Raw run JSON</a></small></p>';
-  }
-  async function refreshCost() { try { const r = await api('/runs/get?id=' + S.id + '&since=999999999'); S.run.cost = r.cost; renderCost(r); } catch (_) {} }
-  $('#dev-toggle').addEventListener('click', () => { const d = $('#dev'); d.hidden = !d.hidden; $('#dev-toggle').setAttribute('aria-expanded', String(!d.hidden)); });
-  $('#dev-close').addEventListener('click', () => { $('#dev').hidden = true; $('#dev-toggle').setAttribute('aria-expanded', 'false'); });
-
-  /* ---- resume a run from the URL ---- */
-  const rid = qs.get('run');
-  if (rid && /^[a-z0-9]{6,20}$/.test(rid)) openRun(rid);
-  else setStep('feed');
+  document.addEventListener('input', (e) => {
+    const f = e.target.dataset && e.target.dataset.f; if (!f || !(f in F)) return;
+    F[f] = e.target.value; if (f !== 'rivalInput') { F.error = ''; if (f === 'url' || f === 'name') { /* keep demo flag until rivals change */ } }
+    if (f === 'market') return; feedSummary();
+  });
+  document.addEventListener('change', (e) => { const f = e.target.dataset && e.target.dataset.f; if (f === 'market') F.market = e.target.value; });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.dataset && e.target.dataset.enter) { e.preventDefault(); act(e.target.dataset.enter, e.target, e); }
+    if (e.key === 'Escape' && M.kind) closeModal();
+  });
   window.addEventListener('popstate', () => { if (location.search !== shownSearch) location.reload(); });
+
+  /* ---------------- start ---------------- */
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('brand')) { const b = qs.get('brand'); if (/\.|@/.test(b)) F.url = b; else F.name = b; }
+  const rid = qs.get('run');
+  if (rid && /^[a-z0-9]{6,20}$/.test(rid)) openRun(rid); else showFeed();
 })();

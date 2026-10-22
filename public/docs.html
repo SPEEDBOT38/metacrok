@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>metacrok — developer docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Funnel+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<style>
+body{line-height:1.6}
+a{color:var(--sky)}a:hover{color:var(--yellow)}
+code{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.88em;background:var(--navy);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--ypx)}
+.px7{font:7px 'Press Start 2P',monospace;opacity:.75}
+.dhead{position:sticky;top:0;z-index:40;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 max(16px,3vw);background:rgba(11,25,44,.94);backdrop-filter:blur(12px);border-bottom:2px solid var(--line)}
+.dhead .l{display:flex;align-items:center;gap:14px;min-width:0}.dhead img{height:clamp(16px,4vw,22px);width:auto;display:block}
+.tagd{font:9px 'Press Start 2P',monospace;color:var(--night);background:var(--teal);padding:6px 7px;border-radius:4px;flex:none}
+.dhead .r{display:flex;align-items:center;gap:clamp(10px,2vw,22px)}.dhead .r a.t{font:600 14px 'Funnel Sans',sans-serif;color:var(--soft);text-decoration:none}
+.dhead .r a.b{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:8px;background:var(--orange);color:var(--night);font:700 14px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 4px 0 var(--orange-d);white-space:nowrap}
+.wrap{display:flex;flex-wrap:wrap;max-width:1320px;margin:0 auto}
+#side{flex:0 0 240px;min-width:0;position:sticky;top:64px;z-index:20;align-self:flex-start;max-height:calc(100vh - 64px);overflow:auto;padding:32px 16px 32px max(16px,3vw);display:flex;flex-direction:column;gap:22px;background:var(--night)}
+.ng{display:flex;flex-direction:column;gap:2px}.gt{color:var(--dim);margin-bottom:8px;letter-spacing:.5px}
+#side button{text-align:left;border:none;padding:7px 10px;border-radius:6px;white-space:nowrap;background:transparent;color:var(--mute);font:600 14px 'Funnel Sans',sans-serif}
+#side button.on{background:var(--navy);color:var(--paper);box-shadow:inset 3px 0 0 var(--orange)}
+main.docs{flex:1 1 520px;min-width:0;padding:40px max(16px,4vw) 120px;display:flex;flex-direction:column;gap:72px;max-width:900px}
+main.docs section{display:flex;flex-direction:column;gap:20px;scroll-margin-top:90px}
+.kick{font:9px 'Press Start 2P',monospace;color:var(--ypx)}
+.d2{font:800 clamp(32px,4.2vw,52px)/.95 'Oxanium',sans-serif;letter-spacing:-.03em;text-transform:lowercase}
+.d1{font:800 clamp(44px,6.4vw,84px)/.9 'Oxanium',sans-serif;letter-spacing:-.035em;text-wrap:balance;text-transform:lowercase}
+.lead{font-size:19px;color:var(--soft);max-width:58ch;text-wrap:pretty}
+.m2{color:var(--soft)}
+.two-c{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;margin-top:8px}
+.pick{text-align:left;border:none;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:8px;text-decoration:none;transition:transform .1s}
+.pick:hover{transform:translateY(-2px);color:inherit}
+.pick.o{background:var(--orange);color:var(--night);box-shadow:0 5px 0 var(--orange-d)}.pick.n{background:var(--navy);color:var(--paper);box-shadow:inset 0 0 0 2px var(--line),0 5px 0 #06101D}
+.pick b{font:800 26px/1 'Oxanium',sans-serif}
+.badges{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.badges span{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:6px;box-shadow:inset 0 0 0 1.5px #37506E;font-size:14px;color:var(--soft)}
+.badges i{width:8px;height:8px;border-radius:2px;background:var(--green)}
+ol.qs{list-style:none;display:flex;flex-direction:column;gap:22px}
+ol.qs>li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px}
+.qn{width:32px;height:32px;border-radius:6px;background:var(--paper);color:var(--night);display:flex;align-items:center;justify-content:center;font:800 16px 'Oxanium',sans-serif}.qn.o{background:var(--orange)}
+.qb{display:flex;flex-direction:column;gap:10px;min-width:0}.qb h3{font:700 20px/1.3 'Oxanium',sans-serif;padding-top:2px}
+.cbox{background:#06101D;border:2px solid var(--line);border-radius:10px;overflow:hidden}.cbox.sm{border-width:1px;border-radius:8px}
+.cbox .ch{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-bottom:1px solid var(--line)}
+.cbox pre{padding:14px 16px;font:400 14px/1.7 'JetBrains Mono',monospace;color:var(--paper);overflow-x:auto}.cbox.sm pre{padding:12px 14px;font-size:13px;line-height:1.65}
+.mono6{font:600 12px 'JetBrains Mono',monospace;color:var(--dim)}
+.cp{height:30px;padding:0 10px;border-radius:6px;border:none;background:var(--line);color:var(--paper);font:600 12px 'Funnel Sans',sans-serif}
+.ctabs{display:flex;gap:4px;overflow-x:auto}.ctab{flex:none;height:32px;padding:0 12px;border-radius:6px;border:none;background:transparent;color:var(--mute);font:600 13px 'Funnel Sans',sans-serif}.ctab.on{background:var(--paper);color:var(--night)}
+.chat{background:var(--navy);border:2px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.chat .who{flex:none;font:8px/2.4 'Press Start 2P',monospace}
+.chat .ln{display:flex;gap:10px;align-items:flex-start}.chat .ln+.ln{border-top:1px solid var(--line);padding-top:12px}
+.box{background:var(--navy);border:2px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+#stages{list-style:none;display:flex;flex-wrap:wrap;gap:6px;align-items:center}#stages li{display:flex;align-items:center;gap:6px}
+.stg{height:40px;padding:0 14px;border-radius:6px;display:flex;align-items:center;gap:8px;background:var(--navy);color:var(--paper);font:700 15px 'JetBrains Mono',monospace}.stg.done{background:var(--green);color:var(--night)}
+.arr{color:#37506E;font-weight:700}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}
+.tfilter{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
+#tool-q{width:min(260px,100%);height:42px;padding:0 12px;border-radius:8px;border:2px solid var(--line);background:#06101D;font-size:15px}
+.tlist{border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.trow+.trow{border-top:1px solid var(--line)}.trow.open{background:#0F2036}
+.thead{width:100%;text-align:left;border:none;background:transparent;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto 20px;gap:12px;align-items:center;color:inherit}
+.tn{font:700 15px 'JetBrains Mono',monospace;color:var(--ypx);overflow-wrap:anywhere}
+.cost{font:600 12px 'Funnel Sans',sans-serif;padding:4px 9px;border-radius:4px;white-space:nowrap;background:#3A2A10;color:var(--yellow)}.cost.free{background:#1E4A2A;color:#8EE59B}
+.chev{font:800 18px 'Oxanium',sans-serif;color:var(--sky);text-align:center}
+.tbody{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+.params{border:1px solid var(--line);border-radius:8px;overflow:hidden}.prm{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr);gap:12px;padding:10px 12px;font-size:14px}.prm+.prm{border-top:1px solid var(--line)}
+.pn{font:500 13px 'JetBrains Mono',monospace;color:var(--paper)}
+.warn{font-size:14px;padding:10px 12px;border-radius:8px;background:#3A1E14;color:#FFB48A;border:1px solid #7A3A1E}
+.rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:6px 28px;padding:16px 0;border-top:2px solid var(--line);align-items:baseline;list-style:none}
+.rule b{font:800 22px/1.1 'Oxanium',sans-serif}.rule span{color:var(--soft);max-width:56ch}
+#endpoints{display:flex;flex-direction:column;gap:10px}
+.meth{font:700 12px 'JetBrains Mono',monospace;padding:4px 8px;border-radius:4px;color:var(--night)}
+.path{font:500 15px 'JetBrains Mono',monospace;overflow-wrap:anywhere}
+pre.body{background:#06101D;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font:400 13px/1.6 'JetBrains Mono',monospace;color:var(--ypx);overflow-x:auto}
+#limits{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.trbox{border:2px solid var(--line);border-radius:10px;overflow:hidden}
+.tro{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:6px 20px;padding:14px 16px}.tro+.tro{border-top:1px solid var(--line)}
+.tro b{font:500 14px 'JetBrains Mono',monospace;color:#FF9A8B}
+@media (max-width:819px){#side{flex:0 0 100%;position:sticky;top:64px;max-height:none;flex-direction:row;gap:4px;padding:8px max(16px,4vw);border-bottom:2px solid var(--line);overflow-x:auto}.ng{flex-direction:row;flex:none;align-items:center}.gt{display:none}}
+</style>
+</head>
+<body>
+<header class="dhead">
+  <div class="l"><a href="/" style="display:block;flex:none"><img src="/assets/logo-white.png" alt="metacrok"></a><span class="tagd">DOCS</span></div>
+  <div class="r"><a class="t" href="https://github.com/SPEEDBOT38/metacrok">GitHub</a><a class="b" href="/app">Open the app</a></div>
+</header>
+<div class="wrap">
+  <nav id="side" aria-label="Docs"></nav>
+  <main class="docs">
+    <section id="overview">
+      <span class="kick">WORLD 0 · OVERVIEW</span>
+      <h1 class="d1">let your agent feed the croc.</h1>
+      <p class="lead">Metacrok runs from Claude Code, Claude Desktop or any MCP client, or straight over HTTP. Your agent names the rivals, and Metacrok reads their live Meta ads and hands back where they crowd, where the open space is, and three ads written for it.</p>
+      <div class="two-c">
+        <a class="pick o" href="#quickstart"><span class="px8">MCP SERVER</span><b>for AI agents</b><span style="font-size:15px">11 tools, one resource, one prompt. Stdio.</span></a>
+        <a class="pick n" href="#api"><span class="px8 s">HTTP API</span><b>for your own code</b><span style="font-size:15px;color:var(--soft)">JSON over HTTP. The MCP server is built on it.</span></a>
+      </div>
+      <div class="badges"><span><i></i>Never posts to an ad account</span><span><i></i>Never invents claims</span><span><i></i>~$0.03–0.10 per live run</span></div>
+    </section>
+
+    <section id="quickstart">
+      <span class="kick">WORLD 1 · QUICKSTART</span>
+      <h2 class="d2">running in two minutes.</h2>
+      <ol class="qs">
+        <li><span class="qn">1</span><div class="qb"><h3>Start Metacrok</h3><p class="m2">The MCP server talks to it over HTTP.</p>
+          <div class="cbox"><div class="ch"><span class="mono6">bash</span><button class="cp" data-copy="start">Copy</button></div><pre id="code-start"></pre></div></div></li>
+        <li><span class="qn">2</span><div class="qb"><h3>Add it to your client</h3>
+          <div class="cbox"><div class="ch" style="padding:6px 8px"><div class="ctabs" id="client-tabs"></div><button class="cp" data-copy="client">Copy</button></div><pre id="client-code"></pre></div>
+          <p id="client-note" style="font-size:14px;color:var(--mute)"></p></div></li>
+        <li><span class="qn o">3</span><div class="qb"><h3>Ask your agent</h3>
+          <div class="chat">
+            <div class="ln"><span class="who s">YOU</span><p style="font:600 17px/1.45 'Oxanium',sans-serif">Run Metacrok for beminimalist.co against Dot &amp; Key and Mamaearth, then give me the three ads.</p></div>
+            <div class="ln"><span class="who y">AGENT</span><div style="display:flex;flex-direction:column;gap:6px;font-size:15px;color:var(--soft)"><span><code>metacrok_start_run</code> → still working, 62%</span><span><code>metacrok_wait_for_run</code> → done in 74s</span><span style="color:var(--paper)">Nobody in your niche explains how the ingredients work. Here are three ads for that gap…</span></div></div>
+          </div></div></li>
+      </ol>
+    </section>
+
+    <section id="flow">
+      <span class="kick">WORLD 2 · HOW A RUN WORKS</span>
+      <h2 class="d2">a run only moves when you push it.</h2>
+      <p class="m2" style="max-width:62ch">A run is a state machine. Each <code>advance</code> call does at most ~45 seconds of work. Keep calling until <code>status</code> isn’t <code>running</code>. The MCP server does this for you inside <code>metacrok_wait_for_run</code>.</p>
+      <ol id="stages"></ol>
+      <div class="grid3" id="flowsteps"></div>
+    </section>
+
+    <section id="tools">
+      <span class="kick">WORLD 3 · MCP TOOLS</span>
+      <div class="tfilter"><h2 class="d2">eleven tools.</h2><input id="tool-q" placeholder="Filter tools" aria-label="Filter tools"></div>
+      <div class="row" id="tool-cats"></div>
+      <div class="tlist" id="toollist"></div>
+      <div class="grid3" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))">
+        <div class="box"><span class="px8 s">RESOURCE</span><code style="align-self:flex-start;overflow-wrap:anywhere">metacrok://runs/{run_id}/report</code><span class="m2" style="font-size:14px">The full report as markdown.</span></div>
+        <div class="box"><span class="px8 s">PROMPT</span><code style="align-self:flex-start">competitor_teardown</code><span class="m2" style="font-size:14px">A ready-made teardown of your rivals’ ads.</span></div>
+      </div>
+    </section>
+
+    <section id="rules">
+      <span class="kick">WORLD 4 · HOUSE RULES</span>
+      <h2 class="d2">what your agent should know.</h2>
+      <ul id="rules-list" style="list-style:none"></ul>
+    </section>
+
+    <section id="api">
+      <span class="kick">WORLD 5 · HTTP API</span>
+      <h2 class="d2">or call it straight.</h2>
+      <p class="m2" style="max-width:62ch">JSON over HTTP on <code>PORT</code> (default 3000). Errors come back as <code>{ "error": "message" }</code> with a 4xx/5xx status.</p>
+      <div id="endpoints"></div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><h3 class="disp" style="font-size:24px;line-height:1;font-weight:800">rate limits <span style="font:500 14px 'Funnel Sans',sans-serif;color:var(--mute)">per visitor, per hour</span></h3><div id="limits"></div></div>
+    </section>
+
+    <section id="trouble">
+      <span class="kick">WORLD 6 · TROUBLESHOOTING</span>
+      <h2 class="d2">game over? continue.</h2>
+      <div class="trbox" id="trouble-list"></div>
+      <p style="font-size:14px;color:var(--mute)">Test the server end to end with no network: <code>node scripts/check-mcp.js</code></p>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast" hidden style="top:auto;bottom:24px"></div>
+<script src="/docs.js"></script>
+</body>
+</html>
