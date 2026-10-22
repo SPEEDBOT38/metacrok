@@ -44,9 +44,15 @@ export function createClient({ baseUrl = 'http://localhost:3000', fetchImpl = fe
     // whether it is done. onProgress({ stage, progress }) is called after each step so a caller can notify.
     async drive(id, { timeoutMs = 50000, onProgress } = {}) {
       const t0 = Date.now();
-      let last = null;
+      let last = null, fails = 0;
       while (Date.now() - t0 < timeoutMs) {
-        last = await call('POST', '/runs/advance', { id });
+        // a dropped connection or a 5xx mid-run is usually a blip: retry like the browser app does
+        try { last = await call('POST', '/runs/advance', { id }); fails = 0; }
+        catch (e) {
+          if (!(e.status === 0 || e.status >= 500) || ++fails > 3) throw e;
+          await sleep(1500 * fails);
+          continue;
+        }
         if (onProgress) {
           try { const r = await call('GET', '/runs/get' + q({ id, since: 999999999 })); await onProgress({ stage: r.stage, progress: r.progress, status: r.status }); } catch (_) { /* progress is best effort */ }
         }

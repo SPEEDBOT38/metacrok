@@ -34,7 +34,7 @@
       const S = this.S, r = this.getBoundingClientRect(); if (!r.width) return;
       S.w = this._c.width = Math.round(r.width); S.h = this._c.height = Math.round(r.height);
       this.ctx.imageSmoothingEnabled = false;
-      S.scale = Math.max(0.6, Math.min(1.15, S.h / 900));
+      S.scale = Math.max(0.6, Math.min(1, S.h / 1050)); // ponytail: capped so tall heroes keep the croc above the fold
       const gh = (this.img?.ground ? this.img.ground.height : 218) * S.scale * 0.75;
       S.groundY = S.h - gh + 20 * S.scale;
       const k = S.croc;

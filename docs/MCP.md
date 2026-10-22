@@ -6,12 +6,16 @@ The server is a thin layer over Metacrok's [HTTP API](API.md). It never publishe
 
 ## Setup
 
+**Fastest: Claude Code in this repo.** The repo ships a `.mcp.json` that points the server at the live app (https://metacrok.vercel.app). Run `npm install`, open `claude` in the repo, and approve the `metacrok` server when asked. Nothing to run locally.
+
+**Against your own copy:**
+
 1. Start Metacrok (the MCP server talks to it over HTTP):
    ```bash
    npm install
    npm start
    ```
-2. Point your client at the MCP server (stdio).
+2. Point your client at the MCP server (stdio), with `METACROK_URL` set to your copy.
 
 **Claude Code**
 ```bash

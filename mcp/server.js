@@ -35,8 +35,13 @@ const waitSeconds = (d) => z.number().int().min(0).max(240).default(d).describe(
 export function createServer({ client = createClient({ baseUrl: process.env.METACROK_URL || 'http://localhost:3000' }) } = {}) {
   const server = new McpServer({ name: 'metacrok', version: '0.1.0' }, { instructions: INSTRUCTIONS });
 
-  // after driving a run: the finished report, an error, or a "keep waiting" note
-  async function outcome(id, d) {
+  // keep a run moving, then report: the finished report, a failure, or a "keep waiting" note.
+  // A run that hits a network error is not lost, so the error always carries the run id.
+  async function driveAndReport(id, secs, extra) {
+    try { await client.drive(id, { timeoutMs: secs * 1000, onProgress: progressReporter(extra) }); return await outcome(id); }
+    catch (e) { return { isError: true, content: [{ type: 'text', text: `Run ${id} is started, but keeping it moving hit an error: ${e.message} The run is not lost: call metacrok_wait_for_run with run_id "${id}" to continue.` }] }; }
+  }
+  async function outcome(id) {
     const run = await client.getRun(id);
     if (run.status === 'done') return text(reportMarkdown(buildReport(run)));
     if (run.status === 'error') return { isError: true, content: [{ type: 'text', text: `Run ${id} failed: ${run.error || 'unknown error'}` }] };
@@ -90,8 +95,7 @@ export function createServer({ client = createClient({ baseUrl: process.env.META
       brand_name: a.brand_name || '', brand_url: a.brand_url || '', brand_ig: a.brand_instagram || '',
       competitors: a.rivals, goal: a.goal, country: a.country, notes: a.notes || '', mode: a.demo ? 'seed' : 'auto',
     });
-    const d = await client.drive(id, { timeoutMs: a.wait_seconds * 1000, onProgress: progressReporter(extra) });
-    return outcome(id, d);
+    return driveAndReport(id, a.wait_seconds, extra);
   }));
 
   server.registerTool('metacrok_wait_for_run', {
@@ -100,8 +104,7 @@ export function createServer({ client = createClient({ baseUrl: process.env.META
     inputSchema: { run_id: runId, wait_seconds: waitSeconds(50) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, guard(async ({ run_id, wait_seconds }, extra) => {
-    const d = await client.drive(run_id, { timeoutMs: wait_seconds * 1000, onProgress: progressReporter(extra) });
-    return outcome(run_id, d);
+    return driveAndReport(run_id, wait_seconds, extra);
   }));
 
   server.registerTool('metacrok_get_report', {
@@ -197,8 +200,7 @@ export function createServer({ client = createClient({ baseUrl: process.env.META
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
   }, guard(async ({ run_id, wait_seconds }, extra) => {
     await client.regenerate(run_id);
-    const d = await client.drive(run_id, { timeoutMs: wait_seconds * 1000, onProgress: progressReporter(extra) });
-    return outcome(run_id, d);
+    return driveAndReport(run_id, wait_seconds, extra);
   }));
 
   server.registerResource('run_report', new ResourceTemplate('metacrok://runs/{run_id}/report', { list: undefined }), {

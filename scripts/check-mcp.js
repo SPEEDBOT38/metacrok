@@ -107,5 +107,22 @@ const fake = async (url) => ({ ok: true, status: 200, json: async () => (url.inc
 const out = await createClient({ fetchImpl: fake, sleep: async () => {} }).drive('abc123', { timeoutMs: 5000 });
 assert.deepEqual([out.done, n], [true, 3]);
 
+// a dropped connection mid-run is retried, not fatal
+let blips = 0, m2 = 0;
+const flaky = async (url) => {
+  if (url.includes('advance') && blips++ < 2) throw Object.assign(new Error('reset'), { cause: { code: 'ECONNRESET' } });
+  return { ok: true, status: 200, json: async () => (url.includes('advance') ? { status: ++m2 < 2 ? 'running' : 'done' } : {}) };
+};
+const out2 = await createClient({ fetchImpl: flaky, sleep: async () => {} }).drive('abc123', { timeoutMs: 5000 });
+assert.equal(out2.done, true, 'drive survives two dropped connections');
+
+// if driving fails for good, the agent still gets the run id back to resume with
+const broken = createServer({ client: { ...stub, createRun: async () => ({ id: 'zzz999' }), drive: async () => { throw new MetacrokError('Can\'t reach Metacrok', 0); } } });
+const [e1, e2] = InMemoryTransport.createLinkedPair();
+const mcp3 = new Client({ name: 'check3', version: '0' });
+await Promise.all([broken.connect(e1), mcp3.connect(e2)]);
+r = await mcp3.callTool({ name: 'metacrok_start_run', arguments: { brand_url: 'acme.co', rivals: ['A'] } });
+assert.ok(r.isError && /run_id "zzz999"/.test(r.content[0].text), 'failed drive returns the run id');
+
 console.log('mcp checks passed');
 process.exit(0);

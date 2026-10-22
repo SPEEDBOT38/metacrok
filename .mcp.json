@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "metacrok": {
+      "command": "node",
+      "args": ["mcp/bin.js"],
+      "env": { "METACROK_URL": "https://metacrok.vercel.app" }
+    }
+  }
+}

@@ -14,6 +14,7 @@ a{color:inherit;text-underline-offset:.18em}
 a:hover{color:#FFD23A}
 img{display:block;max-width:100%}
 ::selection{background:#F7862A;color:#0B192C}
+@media (max-width:700px){.hud-row{position:static!important}}
 </style>
 </head>
 <body>
@@ -33,7 +34,7 @@ img{display:block;max-width:100%}
   </nav>
 
   
-    <div style="position:relative;z-index:2;display:flex;gap:10px;padding:0 max(20px,4vw,calc((100% - 1240px) / 2));justify-content:flex-end;pointer-events:none">
+    <div class="hud-row" style="position:absolute;top:84px;left:0;right:0;z-index:2;display:flex;gap:10px;padding:0 max(20px,4vw,calc((100% - 1240px) / 2));justify-content:flex-end;pointer-events:none">
       <div style="background:rgba(11,25,44,.88);border:2px solid #37B7C3;border-radius:8px;padding:8px 14px;display:flex;flex-direction:column;gap:5px">
         <span style="font:8px 'Press Start 2P',monospace;color:#7CD2FF;letter-spacing:1px">ADS CHOMPED</span>
         <span style="font:15px 'Press Start 2P',monospace;color:#FFDE59" id="hud-ads">0000</span>
@@ -45,19 +46,19 @@ img{display:block;max-width:100%}
     </div>
   
 
-  <div style="position:relative;z-index:1;padding:clamp(24px,5vh,64px) max(20px,4vw,calc((100% - 1240px) / 2)) 0;pointer-events:none">
-    <h1 style="font:800 clamp(52px,9.6vw,148px)/.9 'Oxanium',sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:#F5F8FC;text-shadow:0 .05em 0 #0B192C;max-width:12ch">
+  <div style="position:relative;z-index:1;padding:clamp(12px,3vh,40px) max(20px,4vw,calc((100% - 1240px) / 2)) 0;pointer-events:none">
+    <h1 style="font:800 clamp(44px,min(7.2vw,9.5vh),120px)/.9 'Oxanium',sans-serif;letter-spacing:-.035em;text-transform:lowercase;color:#F5F8FC;text-shadow:0 .05em 0 #0B192C;max-width:12ch">
       <span style="display:block">Eats ads.</span>
       <span style="display:block">Spits out better ones.</span>
     </h1>
-    <p style="margin-top:28px;max-width:46ch;font:500 clamp(17px,1.6vw,20px)/1.5 'Funnel Sans',sans-serif;color:#F5F8FC;background:rgba(11,25,44,.82);padding:14px 18px;border-radius:8px">Name your rivals. Metacrok reads their live Meta ads and your Instagram, maps where they all crowd, and writes three ads for the space nobody owns. For solo D2C founders, in about 90 seconds.</p>
+    <p style="margin-top:20px;max-width:46ch;font:500 clamp(16px,1.5vw,19px)/1.5 'Funnel Sans',sans-serif;color:#F5F8FC;background:rgba(11,25,44,.82);padding:14px 18px;border-radius:8px">Name your rivals. Metacrok reads their live Meta ads and your Instagram, maps where they all crowd, and writes three ads for the space nobody owns. For solo D2C founders, in about 90 seconds.</p>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;pointer-events:auto">
       <a href="/app" style="display:inline-flex;align-items:center;min-height:54px;padding:0 28px;border-radius:8px;background:#F7862A;color:#0B192C;font:700 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:0 5px 0 #0B192C" style-hover="transform:translateY(-2px);box-shadow:0 7px 0 #0B192C;color:#0B192C">Feed the croc</a>
       <a href="#story" style="display:inline-flex;align-items:center;min-height:54px;padding:0 26px;border-radius:8px;background:#0B192C;color:#F5F8FC;font:600 16px 'Funnel Sans',sans-serif;text-decoration:none;box-shadow:inset 0 0 0 2px #37B7C3,0 5px 0 rgba(11,25,44,.6)" style-hover="transform:translateY(-2px);color:#F5F8FC">See what you get</a>
     </div>
   </div>
 
-  <div style="flex:1 0 auto;min-height:440px;pointer-events:none"></div>
+  <div style="flex:1 0 auto;min-height:clamp(220px,38vh,400px);pointer-events:none"></div>
   <div style="position:absolute;z-index:2;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(11,25,44,.88);border:1px solid #37B7C3;border-radius:20px;padding:8px 18px;font:9px/1.6 'Press Start 2P',monospace;color:#7CD2FF;white-space:nowrap;pointer-events:none">SPACE OR TAP TO JUMP</div>
 </header>
 
