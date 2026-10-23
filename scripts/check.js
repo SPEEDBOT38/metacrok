@@ -184,6 +184,18 @@ assert.ok(!handleFits('invites', 'Snack Amor', 'snackamor.com') && handleFits('S
 // a brand's own Facebook link counts even when the page name differs from the brand (Fire-Boltt -> bolttsports); platform links never do
 assert.equal(socialsFromHtml('<a href="https://www.facebook.com/bolttsports">f</a><a href="https://www.facebook.com/shopify">s</a>').fb, 'bolttsports');
 assert.equal(socialsFromHtml('<a href="https://www.facebook.com/shopify">s</a>').fb, null, 'a platform link is not the brand');
+// ---- 22 Oct 2026 edge runs: a new ad copied the position of the rival ad it borrowed from (distance 0) ----
+import { clearOfRivals } from '../lib/util.js';
+const rivalsAt = [{ x: -0.8, y: 0.2 }, { x: -0.7, y: 0.3 }, { x: 0.5, y: -0.6 }];
+const cleared = clearOfRivals([{ angle: 'a', pos: { x: -0.8, y: 0.2 } }, { angle: 'b', pos: { x: -0.79, y: 0.21 } }, { angle: 'c', pos: { x: 0.9, y: 0.9 } }], rivalsAt);
+const dmin = (p, others) => Math.min(...others.map(o => Math.hypot(p.x - o.x, p.y - o.y)));
+assert.ok(cleared.every((v, i) => dmin(v.pos, [...rivalsAt, ...cleared.slice(0, i).map(c => c.pos)]) >= 0.3 - 1e-9), 'no new ad within 0.3 of a rival or of an earlier new ad');
+assert.ok(cleared[0].pos.adjusted && cleared[1].pos.adjusted, 'moved ads are marked');
+assert.ok(!cleared[2].pos.adjusted && cleared[2].pos.x === 0.9, 'an ad already in clear space is left alone');
+assert.deepEqual(clearOfRivals([{ pos: { x: 0, y: 0 } }], []).map(v => v.pos), [{ x: 0, y: 0 }], 'no rivals, nothing to move');
+// a tweak keeps where the ad was placed instead of falling back to an angle-based guess
+const kept = normalizeVariant({ angle: 'humour', headline: 'h', primary_text: 'p', pos: { x: 0.61, y: -0.42, estimated: false, adjusted: true } }, {});
+assert.deepEqual([kept.pos.x, kept.pos.y], [0.61, -0.42]);
 console.log('rivals ok');
 
 console.log('claims ok');
