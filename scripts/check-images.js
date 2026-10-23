@@ -23,7 +23,7 @@ assert.match(p, /image 5 is a stock photo/);
 assert.match(p, /primary #DF2A27, secondary #FFF7EC, background #F9C3D2, text #4A2320/, 'the exact brand palette in hex');
 assert.match(p, /feels playful, high energy/);
 assert.match(p, /no words, letters, numbers, logos or watermarks/, 'the painter never writes the headline: it is set afterwards in the brand font');
-assert.match(p, /top 38% of the frame one calm, plain, completely empty backdrop (no stripes, bands, props or horizon line) in the brand colour #F9C3D2/);
+assert.match(p, /top 38% of the frame one calm, plain, completely empty backdrop \(no stripes, bands, props or horizon line\) in the brand colour #F9C3D2/);
 assert.match(p, /do not show a recognisable face/);
 assert.match(p, /Folded saree on a wooden table/);
 assert.ok(!/Cotton that breathes/.test(p), 'headline text is not sent to the painter');
