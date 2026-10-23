@@ -505,7 +505,7 @@
       case 'add-rival': if (addRival(F.rivalInput)) F.rivalInput = ''; return showFeed();
       case 'rm-rival': F.rivals.splice(Number(d.i), 1); return showFeed();
       case 'suggest': return suggest();
-      case 'pick-sug': { const c = F.sug[Number(d.i)], at = F.rivals.findIndex(r => r.name.toLowerCase() === c.name.toLowerCase()); if (at >= 0) F.rivals.splice(at, 1); else if (!addRival(c.name, c.instagram || c.website || '')) toast('Three rivals is the limit. Remove one first.'); return showFeed(); }
+      case 'pick-sug': { const c = F.sug[Number(d.i)], at = F.rivals.findIndex(r => r.name.toLowerCase() === c.name.toLowerCase()); if (at >= 0) F.rivals.splice(at, 1); else if (!addRival(c.name, c.website || c.instagram || '')) toast('Three rivals is the limit. Remove one first.'); return showFeed(); }
       case 'goal': F.goal = d.v; return showFeed();
       case 'demo': Object.assign(F, { name: 'Acme Glow', url: '', ig: '', rivals: ['glowritual', 'dewdrift', 'barebae'].map(n => ({ name: n, hint: '' })), demo: true, error: '' }); toast('Demo brands loaded (fictional skincare pack)'); return showFeed();
       case 'live': F.demo = false; return showFeed();

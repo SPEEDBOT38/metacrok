@@ -142,5 +142,46 @@ assert.equal(wr['Xyz Beauty'].page_id, 'w2', 'matched by where its ads link, not
 assert.equal(wr['Nope Brand'].resolution, 'not found', 'a wrong website guess fails safe');
 assert.equal(wr['Nope Brand'].ads.length, 0);
 assert.ok(!wr['Nope Brand'].candidates.includes('Plum') && !wr['Nope Brand'].candidates.includes('Totally Different Name'), 'rivals we did find are not listed as what the search "turned up"');
+
+// ---- 22 Oct 2026 reports: "Apple" -> Samsung India matched to Rezoni (a phone-case seller), and a missing page ----
+import { socialsFromHtml, linksTo, baseDomain, handleFits } from '../lib/rivals.js';
+import { sourceUrlsFor } from '../lib/apify.js';
+const mk = (n, pageName, pid, uri, link, src) => ({ ad_archive_id: String(n), page_name: pageName, page_id: pid, url: src, snapshot: { page_profile_uri: uri, link_url: link, images: [{ original_image_url: 'x' }] } });
+const sam = [
+  ...[1, 2, 3, 4, 5].map(n => mk(n, 'Rezoni', 'rz', 'https://www.facebook.com/rezoni/', 'https://rezoni.in/collections/samsung-cases', 'kw')),
+  ...[6, 7].map(n => mk(n, 'Samsung', 'sam', 'https://www.facebook.com/SamsungIndia/', 'https://www.samsung.com/in/smartphones/x', 'kw')),
+  ...[8, 9, 10].map(n => mk(n, 'Sirphire', 'sp', 'https://www.facebook.com/sirphire/', 'https://sirphire.com/oneplus-cases', 'kw')),
+];
+const sm = assignToCompetitors(sam, [{ name: 'Samsung India', site: 'samsung.com', hint_ig: 'samsungindia' }]);
+assert.equal(sm['Samsung India'].page_id, 'sam', 'the real Samsung page beats a case seller whose URL merely says "samsung"');
+assert.equal(assignToCompetitors(sam, [{ name: 'OnePlus', site: 'oneplus.in', hint_ig: 'oneplus_in' }])['OnePlus'].resolution, 'not found', 'a reseller of OnePlus cases is not OnePlus');
+assert.ok(!linksTo('https://rezoni.in/collections/samsung-cases', 'samsung.com') && linksTo('https://shop.samsung.com/in/x', 'samsung.com'), 'links match on host, not path');
+assert.equal(baseDomain('in.nothing.tech'), 'nothing.tech');
+// a rival's own Facebook page link is exact: its ads win with no name guessing, even when a namesake is louder
+const fbItems = [
+  ...[1, 2, 3, 4, 5, 6].map(n => mk(n, 'Nothing Bar & Kitchen', 'bar', 'https://www.facebook.com/nothingbar/', 'https://nothingbar.in/menu', 'kw')),
+  ...[7, 8].map(n => mk(n, 'Nothing', 'nt', 'https://www.facebook.com/nothing/', 'https://nothing.tech/x', 'https://www.facebook.com/nothing')),
+];
+const nf = assignToCompetitors(fbItems, [{ name: 'Nothing', site: 'nothing.tech', fb: 'nothing' }]);
+assert.equal(nf['Nothing'].page_id, 'nt');
+assert.equal(nf['Nothing'].via, 'facebook page');
+// no Facebook page known: a namesake with no tie to the rival's site loses to the page whose ads link to it
+const ns = assignToCompetitors([...fbItems.slice(0, 6), ...[7, 8, 9].map(n => mk(n, 'Nothing Technology', 'nt2', 'https://www.facebook.com/nothingtech/', 'https://nothing.tech/p' + n, 'kw'))], [{ name: 'Nothing', site: 'nothing.tech' }]);
+assert.equal(ns['Nothing'].page_id, 'nt2', 'ads linking to the rival site decide between namesakes');
+// one page wins: lookalikes are never merged
+assert.ok(sm['Samsung India'].ads.every(a => a.page_id === 'sam'));
+// search sources: their page link first, then their website; a name alone only when nothing else is known
+assert.match(sourceUrlsFor({ name: 'Samsung India', site: 'samsung.com', fb: 'SamsungIndia' }, 'IN')[0], /facebook\.com\/SamsungIndia$/);
+const zed = sourceUrlsFor({ name: 'Zed' }, 'IN');
+assert.ok(zed.some(u => /q=Zed/.test(u)) && zed.length <= 5, 'a name-only rival is searched by name, plus a few page-name guesses');
+assert.ok(!sourceUrlsFor({ name: 'Samsung India', site: 'samsung.com', fb: 'SamsungIndia' }, 'IN').some(u => /q=Samsung/.test(u)), 'no name search once its site is known');
+assert.equal(sourceUrlsFor({ name: 'facebook.com/zed', input: 'https://facebook.com/zed', site: 'zed.in' }, 'IN').length, 1, 'a pasted page link is already exact');
+// reading socials off a site
+const html = '<a href="https://www.facebook.com/sharer/sharer.php?u=x">s</a><a href="https://www.facebook.com/SamsungIndia">f</a><a href="https://instagram.com/p/abc">p</a><a href="https://www.instagram.com/samsungindia/">i</a><a href="https://www.instagram.com/samsungindia">i2</a>';
+const so = socialsFromHtml(html);
+assert.deepEqual([so.fb, so.ig], ['SamsungIndia', 'samsungindia'], 'skips share links and posts');
+assert.ok(!handleFits('invites', 'Snack Amor', 'snackamor.com') && handleFits('SamsungIndia', 'Samsung India', 'samsung.com'), 'a handle must resemble the brand');
+console.log('rivals ok');
+
 console.log('claims ok');
 process.exit(0); // pipeline import opens the db

@@ -29,7 +29,8 @@ function parseCompetitor(raw) {
   else if (ig) name = ig[1];
   name = name.replace(/^@/, '').replace(/^https?:\/\/(www\.)?/, '').replace(/\.(com|in|co|store|shop)(\/.*)?$/i, '').trim();
   if (!name) return null;
-  return { name: name.slice(0, 60), input: ig ? name : s, ig: igHandle(s), ...hint }; // ig: also pull their organic posts
+  const slug = fb && !/^(ads|pages|people|profile\.php)$/i.test(fb[1]) && !/^\d+$/.test(fb[1]) ? fb[1] : null; // a pasted page link is exact
+  return { name: name.slice(0, 60), input: ig ? name : s, ig: igHandle(s), ...(slug ? { fb: slug } : {}), ...hint }; // ig: also pull their organic posts
 }
 
 export default async function (req, res) {

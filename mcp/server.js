@@ -69,7 +69,7 @@ export function createServer({ client = createClient({ baseUrl: process.env.META
   }, guard(async ({ brand_name, brand_url, country }) => {
     if (!brand_name && !brand_url) throw new MetacrokError('Give a brand_name or brand_url.', 400);
     const r = await client.suggest({ brand_name, brand_url, country });
-    return json({ niche: r.niche, rivals: (r.competitors || []).map((c) => ({ name: c.name, hint: c.instagram || c.website || undefined, why: c.why })) });
+    return json({ niche: r.niche, rivals: (r.competitors || []).map((c) => ({ name: c.name, hint: c.website || c.instagram || undefined, why: c.why })) });
   }));
 
   server.registerTool('metacrok_start_run', {
