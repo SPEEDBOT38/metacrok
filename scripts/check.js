@@ -181,6 +181,9 @@ const html = '<a href="https://www.facebook.com/sharer/sharer.php?u=x">s</a><a h
 const so = socialsFromHtml(html);
 assert.deepEqual([so.fb, so.ig], ['SamsungIndia', 'samsungindia'], 'skips share links and posts');
 assert.ok(!handleFits('invites', 'Snack Amor', 'snackamor.com') && handleFits('SamsungIndia', 'Samsung India', 'samsung.com'), 'a handle must resemble the brand');
+// a brand's own Facebook link counts even when the page name differs from the brand (Fire-Boltt -> bolttsports); platform links never do
+assert.equal(socialsFromHtml('<a href="https://www.facebook.com/bolttsports">f</a><a href="https://www.facebook.com/shopify">s</a>').fb, 'bolttsports');
+assert.equal(socialsFromHtml('<a href="https://www.facebook.com/shopify">s</a>').fb, null, 'a platform link is not the brand');
 console.log('rivals ok');
 
 console.log('claims ok');
