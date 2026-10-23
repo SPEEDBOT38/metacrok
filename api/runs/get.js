@@ -51,7 +51,7 @@ export default async function (req, res) {
     const { rows: v } = await db.query('SELECT idx, data, version FROM variants WHERE run_id = $1 ORDER BY idx', [id]);
     out.variants = v.map(x => ({ idx: x.idx, version: x.version, ...x.data }));
     const { rows: im } = await db.query('SELECT idx, meta, variant_version, extract(epoch from created_at)::bigint AS t FROM variant_images WHERE run_id = $1 ORDER BY idx', [id]);
-    out.images = im.map(x => ({ idx: x.idx, url: '/api/images/get?run_id=' + id + '&idx=' + x.idx + '&v=' + x.t, variant_version: x.variant_version, ...x.meta }));
+    out.images = im.map(x => ({ idx: x.idx, url: '/api/images?run_id=' + id + '&idx=' + x.idx + '&v=' + x.t, variant_version: x.variant_version, ...x.meta }));
     out.can_make_images = true;
   }
   res.json(out);

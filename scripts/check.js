@@ -196,6 +196,10 @@ assert.deepEqual(clearOfRivals([{ pos: { x: 0, y: 0 } }], []).map(v => v.pos), [
 // a tweak keeps where the ad was placed instead of falling back to an angle-based guess
 const kept = normalizeVariant({ angle: 'humour', headline: 'h', primary_text: 'p', pos: { x: 0.61, y: -0.42, estimated: false, adjusted: true } }, {});
 assert.deepEqual([kept.pos.x, kept.pos.y], [0.61, -0.42]);
+// Vercel's free plan deploys at most 12 serverless functions (every file under api/ is one); a 13th fails the whole deploy
+import fs from 'node:fs';
+const countApi = (dir) => fs.readdirSync(dir, { withFileTypes: true }).reduce((n, e) => n + (e.isDirectory() ? countApi(dir + '/' + e.name) : /\.js$/.test(e.name) ? 1 : 0), 0);
+assert.ok(countApi('api') <= 12, 'api/ has ' + countApi('api') + ' functions: Vercel Hobby allows 12. Merge endpoints (see api/images.js) or move logic into lib/.');
 console.log('rivals ok');
 
 console.log('claims ok');

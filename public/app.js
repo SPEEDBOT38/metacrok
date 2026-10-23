@@ -441,7 +441,7 @@
   async function makeImage(idx) {
     S.img[idx] = { state: 'busy' }; rerender();
     try {
-      const r = await api('/images/create', { body: { run_id: S.id, idx } });
+      const r = await api('/images', { body: { run_id: S.id, idx } });
       S.run.images = [...(S.run.images || []).filter(i => i.idx !== idx), r].sort((a, b) => a.idx - b.idx);
       S.img[idx] = {};
       toast('Ad ' + (idx + 1) + ' painted · ' + usd(r.cost_usd));
