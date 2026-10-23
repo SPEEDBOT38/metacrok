@@ -150,7 +150,7 @@
         '<h1 class="stage-h" id="c-word">sniffing</h1><p style="margin-top:12px;font-size:18px;color:var(--soft)" id="c-desc"></p></div>' +
         '<div style="display:flex;align-items:center;gap:14px"><div class="blocks" id="c-blocks">' + '<i></i>'.repeat(20) + '</div><span class="px y" style="font-size:14px;min-width:60px;text-align:right" id="c-pct">0%</span></div>' +
         '<ol class="stages" id="c-stages"></ol>' +
-        '<div class="runerr" id="c-err" hidden><p class="err" id="c-errmsg"></p><div class="row"><button class="btn" data-act="retry-live">Try live again</button><button class="btn ghost" data-act="retry-demo">Run on demo ads</button><button class="btn ghost" data-act="go" data-k="feed">Back to the form</button></div></div></div>' +
+        '<div class="runerr" id="c-err" hidden><p class="err" id="c-errmsg"></p><div class="row"><button class="btn" data-act="retry-live">Try live again</button><button class="btn ghost" data-act="retry-demo">Run on demo ads</button><button class="btn ghost" data-act="go" data-k="feed">Back to the form</button></div><div id="rescue" style="display:flex;flex-direction:column;gap:10px"></div></div></div>' +
       '<div class="klog"><p class="px s" style="margin-bottom:12px">KITCHEN LOG</p><ol id="c-log"></ol></div></div></main>';
   }
   function elapsed(r) { const end = r.finished_at ? new Date(r.finished_at).getTime() : Date.now(); return (end - new Date(r.created_at).getTime()) / 1000; }
@@ -189,7 +189,30 @@
       await sleep(1200);
     }
   }
-  function chewError(msg) { if (S.screen !== 'chew') return; const e = $('#c-err'); if (!e) return; e.hidden = false; $('#c-errmsg').textContent = msg; clearInterval(S.clockT); }
+  /* ---- rescue: the rivals had no ads, so offer real ones instead of a dead end ---- */
+  const basePayload = () => {
+    const r = S.run && S.run.input;
+    return S.lastPayload ? { ...S.lastPayload } : r ? { brand_name: r.brand.name, brand_url: r.brand.url, brand_ig: r.brand.ig || '', goal: r.goal, notes: r.notes, country: r.country, mode: 'auto' } : {};
+  };
+  const NO_ADS = /no active ads|found no active|nobody was advertising|direct competitor/i;
+  async function rescue() {
+    const box = $('#rescue'); if (!box) return;
+    const p = basePayload();
+    const already = S.run && S.run.input && S.run.input.market;
+    box.innerHTML = '<p style="font-size:14px;color:var(--soft)">' + (already ? 'The market search didn’t help either.' : 'Looking for real rivals that sell what you sell…') + '</p>';
+    if (already) { box.innerHTML += '<p style="font-size:14px;color:var(--mute)">Paste a rival’s Facebook page link or its Ad Library link in place of its name on the first screen.</p>'; return; }
+    try {
+      const r = await api('/suggest', { body: { brand_name: p.brand_name, brand_url: p.brand_url, country: p.country } });
+      S.rescueList = r.competitors || [];
+      box.innerHTML = '<p class="px s" style="margin-top:4px">REAL RIVALS WE FOUND</p><div class="row">' + S.rescueList.map((c, i) =>
+        '<label class="chip" style="padding:0 12px 0 10px;gap:8px"><input type="checkbox" data-resc="' + i + '"' + (i < 3 ? ' checked' : '') + '><span>' + esc(c.name) + '</span>' + (c.website ? '<small style="color:#5B6B7E">' + esc(c.website) + '</small>' : '') + '</label>').join('') + '</div>' +
+        '<div class="row"><button class="btn" data-act="rescue-run">Run with the ticked ones</button><button class="btn ghost" data-act="rescue-market">Use whoever advertises in my category</button></div>' +
+        '<p style="font-size:13px;color:var(--mute)">Not every rival advertises on Meta, so some may still come back empty. “Whoever advertises” reads the Ad Library for your product category and keeps the real brands.</p>';
+    } catch (e) {
+      box.innerHTML = '<div class="row"><button class="btn" data-act="rescue-market">Use whoever advertises in my category</button></div><p style="font-size:13px;color:var(--mute)">' + esc(e.message) + '</p>';
+    }
+  }
+  function chewError(msg) { if (S.screen !== 'chew') return; const e = $('#c-err'); if (!e) return; e.hidden = false; $('#c-errmsg').textContent = msg; clearInterval(S.clockT); if (NO_ADS.test(msg)) rescue(); }
   function paintChew(r) {
     if (!$('#c-word')) return;
     const comps = (r.competitors && r.competitors.length ? r.competitors : (r.input && r.input.competitors) || []).map(c => c.name);
@@ -536,6 +559,13 @@
       case 'demo': Object.assign(F, { name: 'Acme Glow', url: '', ig: '', rivals: ['glowritual', 'dewdrift', 'barebae'].map(n => ({ name: n, hint: '' })), demo: true, error: '' }); toast('Demo brands loaded (fictional skincare pack)'); return showFeed();
       case 'live': F.demo = false; return showFeed();
       case 'feed': return feed();
+      case 'rescue-run': {
+        const picked = $$('[data-resc]').filter(x => x.checked).map(x => S.rescueList[Number(x.dataset.resc)]).filter(Boolean);
+        if (!picked.length) return toast('Tick at least one rival.');
+        const p = { ...basePayload(), mode: 'auto', competitors: picked.map(c => ({ name: c.name, hint: c.website || c.instagram || '' })) }; delete p.market;
+        el.disabled = true; try { await startRun(p); } catch (e) { toast(e.message); el.disabled = false; } return;
+      }
+      case 'rescue-market': { const p = { ...basePayload(), mode: 'auto', competitors: [], market: true }; el.disabled = true; try { await startRun(p); } catch (e) { toast(e.message); el.disabled = false; } return; }
       case 'retry-live': { const p = { ...(S.lastPayload || payload()), mode: 'auto' }; try { await startRun(p); } catch (e) { toast(e.message); } return; }
       case 'retry-demo': { const p = { ...(S.lastPayload || payload()), mode: 'seed' }; if (!p.competitors || !p.competitors.length) p.competitors = ['glowritual', 'dewdrift', 'barebae'].map(n => ({ name: n, hint: '' })); try { await startRun(p); } catch (e) { toast(e.message); } return; }
       case 'share': return copy(location.href, 'Share link copied');

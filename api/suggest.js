@@ -5,6 +5,7 @@ import { claude, extractJson } from '../lib/claude.js';
 import { SUGGEST_SYSTEM, SAMEKIND_SYSTEM } from '../lib/prompts.js';
 import { clientIp, hashIp, rateLimit, str, htmlToText } from '../lib/util.js';
 import { fetchSite, titleOf, descOf, readRival, cleanDomain, isDomain } from '../lib/rivals.js';
+import { webSearch, hasFirecrawl } from '../lib/web.js';
 
 export const access = 'public';
 export const methods = ['POST'];
@@ -34,11 +35,33 @@ export default async function (req, res) {
     }
     const about = site ? 'Their website says:\nTitle: ' + site.title + '\nDescription: ' + site.description + '\nText: ' + site.text : 'We could not read their website; rely on web search for what they sell.';
 
-    // 2. candidates that sell the same kind of product
+    // 2a. real web searches for the category: a small niche is invisible to a model's memory (Munch & Co got guesses)
+    let webCtx = '';
+    if (hasFirecrawl()) {
+      try {
+        const q = await claude({
+          role: 'writer', purpose: 'suggest-queries', maxTokens: 220, timeoutMs: Math.min(10000, left()),
+          system: 'You write web searches that find the direct competitors of a small direct-to-consumer brand. Return ONLY JSON: {"queries": ["best <product category> brands in <market>", "<product category> D2C brand instagram <market>"]}. Use the broad product category, never the founder\'s own brand name.',
+          messages: [{ role: 'user', content: 'Founder brand: ' + (name || '') + ' ' + (url || '') + '\nMarket: ' + country + '\n' + about }],
+        });
+        usd += q.usd || 0;
+        const queries = ((extractJson(q.text) || {}).queries || []).map(x => str(x, 90)).filter(Boolean).slice(0, 2);
+        const found = await Promise.all(queries.map(x => webSearch(x, { limit: 8 }).catch(() => [])));
+        const seen = new Set(), lines = [];
+        for (const r of found.flat()) {
+          const host = (r.url.match(/^https?:\/\/(?:www\.)?([^/]+)/) || [])[1] || '';
+          if (!host || seen.has(host + r.title)) continue; seen.add(host + r.title);
+          lines.push('- ' + r.title + ' (' + host + '): ' + r.description);
+        }
+        if (lines.length) webCtx = '\n\nWEB SEARCH RESULTS (real pages about this category; prefer brands that appear here, and only add one from memory if you are sure it exists):\n' + lines.slice(0, 16).join('\n');
+      } catch (_) { /* suggestions still work from the model's own knowledge */ }
+    }
+
+    // 2b. candidates that sell the same kind of product
     const r = await claude({
       role: 'writer', purpose: 'suggest-competitors', maxTokens: 1800, system: SUGGEST_SYSTEM, timeoutMs: Math.min(34000, left()),
       tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
-      messages: [{ role: 'user', content: 'Founder brand: ' + (name || '') + ' ' + (url || '') + '\nCountry/market: ' + country + '\n' + about + '\n\nFind their closest direct competitors that run Meta ads.' }],
+      messages: [{ role: 'user', content: 'Founder brand: ' + (name || '') + ' ' + (url || '') + '\nCountry/market: ' + country + '\n' + about + webCtx + '\n\nFind their closest direct competitors that run Meta ads.' }],
     });
     usd += r.usd || 0;
     const j = extractJson(r.text) || {};

@@ -47,7 +47,8 @@ export default async function (req, res) {
   const competitors = (Array.isArray(b.competitors) ? b.competitors : []).map(parseCompetitor).filter(Boolean).slice(0, 3);
   const seen = new Set();
   const uniq = competitors.filter(c => { const k = c.name.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
-  if (!uniq.length && mode !== 'seed') return res.status(400).json({ error: 'Name at least one competitor, or let the gator suggest some.' });
+  const market = b.market === true && !uniq.length; // opt-in: no rival named, find who advertises in the category
+  if (!uniq.length && mode !== 'seed' && !market) return res.status(400).json({ error: 'Name at least one competitor, or let the gator suggest some.' });
 
   const goal = GOALS.includes(b.goal) ? b.goal : 'cold traffic';
   const country = COUNTRIES.includes(b.country) ? b.country : 'IN';
@@ -60,8 +61,8 @@ export default async function (req, res) {
   }
 
   const id = newId(10);
-  const input = { brand: { name: brandName, url: brandUrl, ig: brandIg }, competitors: uniq, goal, notes, country, mode };
+  const input = { brand: { name: brandName, url: brandUrl, ig: brandIg }, competitors: uniq, goal, notes, country, mode, ...(market ? { market: true } : {}) };
   await db.query('INSERT INTO runs (id, input, ip_hash) VALUES ($1, $2, $3)', [id, JSON.stringify(input), ipHash]);
-  await db.query('INSERT INTO run_logs (run_id, kind, line) VALUES ($1, $2, $3)', [id, 'ok', 'fed: ' + (brandName || brandUrl) + ' + ' + (uniq.map(c => c.name).join(', ') || 'demo competitors')]);
+  await db.query('INSERT INTO run_logs (run_id, kind, line) VALUES ($1, $2, $3)', [id, 'ok', 'fed: ' + (brandName || brandUrl) + ' + ' + (uniq.map(c => c.name).join(', ') || (market ? 'whoever advertises in your category' : 'demo competitors'))]);
   res.json({ id });
 }
