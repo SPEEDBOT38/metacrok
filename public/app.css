@@ -211,3 +211,11 @@ mark.ph{background:var(--mint);color:var(--night);border-radius:3px;padding:0 3p
 .imgp img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;display:block;background:var(--night)}
 .imgp a{color:var(--sky)}
 a.btn{text-decoration:none}
+
+/* ad image: headline set in the brand's own font over the picture */
+.art.pic{position:relative;container-type:inline-size;display:block;padding:0}
+.imgov{position:relative;container-type:inline-size;border-radius:8px;overflow:hidden;line-height:0}
+.imgov img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.ovl{position:absolute;left:6%;right:6%;top:7%;text-align:center;font-size:8.2cqw;line-height:1.08;font-weight:400;letter-spacing:0;text-transform:none;text-wrap:balance;pointer-events:none}
+.kit{display:flex;gap:6px;flex-wrap:wrap}.kit span{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 8px;border-radius:5px;background:var(--night);font:500 12px 'Funnel Sans',sans-serif;color:var(--soft)}
+.kit i{width:12px;height:12px;border-radius:3px;box-shadow:0 0 0 1px rgba(255,255,255,.25)}

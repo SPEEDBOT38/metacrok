@@ -448,18 +448,62 @@
   }
 
   /* ---- Ads ---- */
-  /* ---- ad image: Pexels for inspiration, Nano Banana paints it ---- */
+  /* ---- ad image: the brand's real product + colours, headline set in the brand's own font ---- */
+  const fontsLoaded = new Set();
+  function ensureFont(family) {
+    if (!family || fontsLoaded.has(family)) return;
+    fontsLoaded.add(family);
+    const l = document.createElement('link'); l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(family).replace(/%20/g, '+') + '&display=swap';
+    document.head.appendChild(l);
+  }
+  const fontCss = (f) => f ? "'" + String(f).replace(/'/g, '') + "', system-ui, sans-serif" : 'system-ui, sans-serif';
+  function overlayHtml(im) {
+    const o = im && im.overlay; if (!o || !o.text) return '';
+    ensureFont(o.font);
+    return '<div class="ovl" style="font-family:' + esc(fontCss(o.font)) + ';color:' + esc(o.color || '#fff') + '">' + esc(o.text) + '</div>';
+  }
   function imagePanel(v) {
     const im = (S.run.images || []).find(i => i.idx === v.idx), st = S.img[v.idx] || {}, busy = st.state === 'busy';
-    const credit = im && (im.photos || []).length ? '<p style="font-size:12px;color:var(--mute)">Inspired by photos from <a href="' + (im.photos[0].source === 'Pexels' ? 'https://www.pexels.com' : 'https://pixabay.com') + '" target="_blank" rel="noopener">' + esc(im.photos[0].source || 'Pixabay') + '</a>: ' + im.photos.map(p => '<a href="' + esc(p.page) + '" target="_blank" rel="noopener">' + esc(p.photographer) + '</a>').join(', ') + '.</p>' : '';
+    const credit = im && (im.photos || []).length ? '<p style="font-size:12px;color:var(--mute)">Mood photo from <a href="' + (im.photos[0].source === 'Pexels' ? 'https://www.pexels.com' : 'https://pixabay.com') + '" target="_blank" rel="noopener">' + esc(im.photos[0].source || 'Pixabay') + '</a>: ' + im.photos.map(p => '<a href="' + esc(p.page) + '" target="_blank" rel="noopener">' + esc(p.photographer) + '</a>').join(', ') + '.</p>' : '';
+    const k = im && im.kit || {}, cols = k.colors || {};
+    const swatches = [['primary', cols.primary], ['secondary', cols.secondary], ['background', cols.background], ['text', cols.text]].filter(x => x[1]).filter((x, i, a) => a.findIndex(y => y[1] === x[1]) === i);
+    const kitRow = im ? '<div class="kit">' + swatches.map(([n, h]) => '<span title="' + esc(n + ' ' + h) + '"><i style="background:' + esc(h) + '"></i>' + esc(h) + '</span>').join('') +
+      (k.fonts && (k.fonts.heading || k.fonts.body) ? '<span>Aa ' + esc([k.fonts.heading, k.fonts.body].filter((x, i, a) => x && a.indexOf(x) === i).join(' + ')) + '</span>' : '') + '</div>' : '';
+    const real = im ? (k.product ? 'Painted from your real “' + esc(k.product) + '” photo' + (k.logo_used ? ' and logo' : '') + '. ' : 'No product photo found on your site, so the product is drawn from the description with no logo or lettering. ') : '';
     return '<div class="imgp"><p class="px s">AD IMAGE</p>' +
-      (im ? '<img src="' + esc(im.url) + '" alt="Painted image for ad ' + (v.idx + 1) + '">' +
+      (im ? '<div class="imgov"><img src="' + esc(im.url) + '" alt="Painted image for ad ' + (v.idx + 1) + '">' + overlayHtml(im) + '</div>' + kitRow +
         (im.variant_version !== (v.version || 1) ? '<p style="font-size:13px;color:var(--yellow)">Painted for an earlier version of this ad. Make a new one to match the rewrite.</p>' : '') +
-        '<p style="font-size:12px;color:var(--mute)">' + (im.text_on_image ? 'Text on the image: “' + esc(im.text_on_image) + '”. ' : 'No words on the image: add your headline in Ads Manager. ') + (im.brand_refs ? 'Matched to ' + im.brand_refs + ' of your own posts. ' : '') + (im.pexels_note ? esc(im.pexels_note) + '. ' : '') + 'Painted by Nano Banana · ' + usd(im.usd) + '</p>' + credit
-        : '<p style="font-size:14px;color:var(--soft)">Paint this ad in your brand’s look, using inspiration photos and your own posts. Takes about 20 seconds.</p>') +
+        '<p style="font-size:12px;color:var(--mute)">' + real + (im.overlay ? 'Headline set in ' + esc(im.overlay.font || 'your brand font') + '. ' : 'No headline: the ad has no short on-image line without a [placeholder]. ') + (im.pexels_note ? esc(im.pexels_note) + '. ' : '') + 'Painted by Nano Banana · ' + usd(im.usd) + '</p>' + credit
+        : '<p style="font-size:14px;color:var(--soft)">Paint this ad from your real product photos, brand colours and fonts. Takes about 20 seconds.</p>') +
       (st.error ? '<p class="err" style="font-size:14px">' + esc(st.error) + '</p>' : '') +
       '<div class="row"><button class="btn sm" style="height:40px"' + (busy ? ' disabled' : '') + ' data-act="img-make" data-i="' + v.idx + '">' + (busy ? 'Painting…' : im ? 'Make a new one' : 'Make the image') + '</button>' +
-      (im ? '<a class="btn mid sm" style="height:40px;text-decoration:none" href="' + esc(im.url) + '" download="metacrok-ad-' + (v.idx + 1) + '.png">Download</a>' : '') + '</div></div>';
+      (im ? '<button class="btn mid sm" style="height:40px" data-act="img-dl" data-i="' + v.idx + '">Download</button>' : '') + '</div></div>';
+  }
+  // the downloadable ad: the painted picture with the headline drawn in the brand's font, exactly as the preview shows it
+  async function composeAd(idx) {
+    const im = (S.run.images || []).find(i => i.idx === idx); if (!im) return null;
+    const img = new Image(); img.crossOrigin = 'anonymous'; img.src = im.url; await img.decode();
+    const W = img.naturalWidth, H = img.naturalHeight, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, W, H);
+    const o = im.overlay;
+    if (o && o.text) {
+      ensureFont(o.font); const px = Math.round(W * 0.082);
+      try { await document.fonts.load(px + 'px "' + o.font + '"', o.text); } catch (_) {}
+      g.font = px + 'px ' + fontCss(o.font); g.fillStyle = o.color || '#fff'; g.textAlign = 'center'; g.textBaseline = 'top';
+      const words = o.text.split(' '), lines = []; let cur = '';
+      for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > W * 0.88 && cur) { lines.push(cur); cur = w; } else cur = t; }
+      if (cur) lines.push(cur);
+      lines.slice(0, 3).forEach((ln, i) => g.fillText(ln, W / 2, H * 0.07 + i * px * 1.08));
+    }
+    return await new Promise(res => c.toBlob(res, 'image/png'));
+  }
+  async function downloadAd(idx) {
+    try {
+      const blob = await composeAd(idx); if (!blob) return;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'metacrok-ad-' + (idx + 1) + '.png'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (e) { toast('Could not build the download: ' + e.message); }
   }
   async function makeImage(idx) {
     S.img[idx] = { state: 'busy' }; rerender();
@@ -482,9 +526,9 @@
     const fields = [['Primary text', v.primary_text, 300], ['Headline', v.headline, 40], ['Description', v.description, 30], ['Button', v.cta, 0]];
     const w = nr ? distWord(nr.d) : null;
     return '<section class="pane"><div class="pane-h"><h2>three ads for the open space.</h2><p><mark class="ph">[Brackets]</mark> are yours to fill. We never invent ratings, offers or stories. Review, then paste into Ads Manager.</p></div>' +
-      '<div class="row" style="align-items:center"><button class="btn" data-act="img-all"' + ([0, 1, 2].some(i => (S.img[i] || {}).state === 'busy') ? ' disabled' : '') + '>Make images for all ' + vars.length + '</button><span style="font-size:13px;color:var(--mute)">Each image is painted by Nano Banana from stock-photo inspiration and your own posts, about 3 cents per ad.</span></div>' +
+      '<div class="row" style="align-items:center"><button class="btn" data-act="img-all"' + ([0, 1, 2].some(i => (S.img[i] || {}).state === 'busy') ? ' disabled' : '') + '>Make images for all ' + vars.length + '</button><span style="font-size:13px;color:var(--mute)">Each image is painted by Nano Banana from your real product photos, brand colours and fonts, about 3 to 4 cents per ad.</span></div>' +
       '<div class="grid-auto">' + vars.map((x, i) => '<button class="vbtn' + (i === S.sel ? ' on' : '') + '" data-act="sel-var" data-i="' + i + '"><div class="vhead"><span class="px y">AD ' + (x.idx + 1) + ' · V' + (x.version || 1) + '</span><span style="font:600 13px \'Funnel Sans\',sans-serif;color:var(--soft)">' + esc(x.angle) + '</span></div>' +
-        '<div class="fb"><div class="who"><i></i><div><b>' + esc(handle) + '</b><small>Sponsored</small></div></div><p class="pt">' + esc(String(x.primary_text || '').replace(/\[([^\]]+)\]/g, '[$1]')) + '</p>' + (imgOf(x.idx) ? '<div class="art" style="background:url(' + esc(imgOf(x.idx).url) + ') center/cover"></div>' : '<div class="art" style="background:' + ART[(x.idx + (x.angle || '').length) % ART.length] + '">' + esc(x.overlay_text || x.headline) + '</div>') + '' +
+        '<div class="fb"><div class="who"><i></i><div><b>' + esc(handle) + '</b><small>Sponsored</small></div></div><p class="pt">' + esc(String(x.primary_text || '').replace(/\[([^\]]+)\]/g, '[$1]')) + '</p>' + (imgOf(x.idx) ? '<div class="art pic" style="background:url(' + esc(imgOf(x.idx).url) + ') center/cover">' + overlayHtml(imgOf(x.idx)) + '</div>' : '<div class="art" style="background:' + ART[(x.idx + (x.angle || '').length) % ART.length] + '">' + esc(x.overlay_text || x.headline) + '</div>') + '' +
         '<div class="bar"><div style="min-width:0"><b>' + esc(x.headline) + '</b><span class="d">' + esc(x.description) + '</span></div><span class="cta">' + esc(x.cta) + '</span></div></div></button>').join('') + '</div>' +
       '<div class="detail"><div class="col-g"><div class="row" style="align-items:center;gap:12px"><span class="px y">AD ' + (v.idx + 1) + '</span><h3 class="disp" style="font-size:30px;line-height:1;font-weight:800">' + esc(v.angle) + '</h3>' + (v.audience ? '<span style="font:600 12px \'Funnel Sans\',sans-serif;padding:4px 10px;border-radius:4px;background:var(--paper);color:var(--night)">for ' + esc(v.audience) + '</span>' : '') + '</div>' +
         fields.map(([l, t, max], i) => '<div class="field"><div class="fh"><span>' + l + (max ? ' <span class="px8" style="color:' + (String(t || '').length > max ? 'var(--red)' : 'var(--dim)') + ';margin-left:6px">' + String(t || '').length + '/' + max + '</span>' : '') + '</span><button class="btn mid sm" data-act="copy-field" data-i="' + i + '" style="height:32px">Copy</button></div><p>' + ph(t) + '</p></div>').join('') +
@@ -579,6 +623,7 @@
       case 'copy-field': { const v = S.run.variants[S.sel], f = [v.primary_text, v.headline, v.description, v.cta][Number(d.i)]; return copy(f, 'Copied'); }
       case 'copy-all': { const v = S.run.variants[S.sel]; return copy([v.primary_text, '', 'Headline: ' + v.headline, 'Description: ' + v.description, 'CTA: ' + v.cta, '', 'Creative: ' + v.creative_direction, 'Text on image: ' + (v.overlay_text || ''), 'Angle: ' + v.angle].join('\n'), 'Copied. Paste it into Ads Manager.'); }
       case 'img-make': return makeImage(Number(d.i));
+      case 'img-dl': return downloadAd(Number(d.i));
       case 'img-all': return void (await Promise.all((S.run.variants || []).map(v => makeImage(v.idx))));
       case 'rewrite': {
         const inp = $('#tweak-in'), text = ((inp && inp.value) || S.tweak).trim(); if (!text) return toast('Say how to change it first');

@@ -1,6 +1,6 @@
 // scripts/check-images.js — ad image generation with stubbed Pexels and OpenRouter (no network, no cost).
 import assert from 'node:assert/strict';
-import { adPrompt, printableOverlay, toDataUrl, paintAd, pexelsSearch, pixabaySearch, stockSearch, stockName, ImageSetupError, DEFAULT_IMAGE_MODELS } from '../lib/images.js';
+import { adPrompt, printableOverlay, headlineFor, toDataUrl, paintAd, pexelsSearch, pixabaySearch, stockSearch, stockName, ImageSetupError, DEFAULT_IMAGE_MODELS } from '../lib/images.js';
 
 process.env.OPENROUTER_API_KEY = 'test-key';
 const run = { input: { brand: { name: 'Acme' } }, brand: { name: 'Acme', sells: 'hand-block printed cotton sarees', tone_of_voice: 'calm, understated', voice_traits: ['elegant'], colour: '#8a2b3d', price_band: 'mid' } };
@@ -12,14 +12,29 @@ assert.equal(printableOverlay({ overlay_text: '[founder story]' }), '');
 assert.equal(printableOverlay({ overlay_text: 'Grooming science explained simply ' + String.fromCodePoint(0x1F62E, 0x200D, 0x1F4A8) }), 'Grooming science explained simply', 'emoji are not painted');
 assert.equal(printableOverlay({ overlay_text: String.fromCodePoint(0x1F525, 0x1F525) }), '');
 assert.equal(printableOverlay({ overlay_text: 'x'.repeat(80) }), '');
-const p = adPrompt(run, v, { brandRefs: 2, inspoRefs: 3 });
-assert.match(p, /Cotton that breathes/);
+const kit = { colors: { primary: '#DF2A27', secondary: '#FFF7EC', background: '#F9C3D2', text: '#4A2320' }, fonts: { heading: 'Bagel Fat One', body: 'Figtree' }, personality: { tone: 'playful', energy: 'high' } };
+const product = { title: 'Red Velvet', images: ['https://cdn.example/rv.jpg'] };
+const p = adPrompt(run, v, { kit, product, refs: { product: 2, logo: 1, brand: 1, mood: 1 } });
+assert.match(p, /images 1 to 2 show the REAL product "Red Velvet"/, 'the real product photos are named first');
+assert.match(p, /Do NOT redesign it, do NOT invent a different box/, 'never invent packaging');
+assert.match(p, /image 3 is the brand's real logo/);
+assert.match(p, /image 4 is from the brand's own Instagram/);
+assert.match(p, /image 5 is a stock photo/);
+assert.match(p, /primary #DF2A27, secondary #FFF7EC, background #F9C3D2, text #4A2320/, 'the exact brand palette in hex');
+assert.match(p, /feels playful, high energy/);
+assert.match(p, /no words, letters, numbers, logos or watermarks/, 'the painter never writes the headline: it is set afterwards in the brand font');
+assert.match(p, /top 38% of the frame one calm, plain, completely empty backdrop (no stripes, bands, props or horizon line) in the brand colour #F9C3D2/);
+assert.match(p, /do not show a recognisable face/);
 assert.match(p, /Folded saree on a wooden table/);
-assert.match(p, /first 2 attached image\(s\) are the BRAND'S OWN posts/);
-assert.match(p, /3 attached image\(s\) are stock-photo INSPIRATION/);
-assert.match(p, /#8a2b3d/);
-assert.match(adPrompt(run, { ...v, overlay_text: '[N] customers' }, {}), /no words, letters, numbers or logos/, 'a placeholder is never painted');
-assert.ok(!/BRAND'S OWN posts/.test(adPrompt(run, v, {})), 'no brand refs, no claim about them');
+assert.ok(!/Cotton that breathes/.test(p), 'headline text is not sent to the painter');
+const bare = adPrompt(run, v, { kit: {}, product: null, refs: {} });
+assert.match(bare, /no product photo is available[^]*NO brand name, logo or lettering/, 'no photo: forbid invented lettering');
+assert.match(bare, /LOGO: use no logo or brand name anywhere/);
+assert.ok(!/REAL product/.test(bare) && !/COLOURS/.test(bare), 'nothing claimed that we do not have');
+// the headline: the on-image line, else the ad headline; never a placeholder or emoji
+assert.equal(headlineFor(v), 'Cotton that breathes');
+assert.equal(headlineFor({ overlay_text: '[N] customers', headline: 'Honest cotton' }), 'Honest cotton');
+assert.equal(headlineFor({ overlay_text: '', headline: '[offer] sale' }), '');
 
 // models: Google only, newest Nano Banana first
 assert.ok(DEFAULT_IMAGE_MODELS.every(m => m.startsWith('google/')) && /nano-banana/.test(DEFAULT_IMAGE_MODELS[0]));
@@ -82,5 +97,28 @@ let pburl = null;
 const pix = await stockSearch('folded saree table', { n: 2, fetchImpl: async (url) => { pburl = url; return { ok: true, json: async () => ({ hits: [{ id: 5, pageURL: 'https://pixabay.com/photos/x-5/', user: 'Bea', user_id: 99, webformatURL: 'https://pixabay.com/get/5_640.jpg', tags: 'saree, cloth' }, { id: 6, pageURL: 'p' }, { id: 7, pageURL: 'p7', user: 'Cy', user_id: 1, webformatURL: 'https://pixabay.com/get/7.jpg' }] }) }; } });
 assert.match(pburl, /pixabay\.com\/api\/\?key=pbk&q=folded%20saree%20table&image_type=photo&safesearch=true/);
 assert.deepEqual(pix.map(x => [x.id, x.photographer, x.source, x.photographer_url]), [['pb5', 'Bea', 'Pixabay', 'https://pixabay.com/users/Bea-99/']], 'n caps the list, photos with no image are dropped');
+
+// ---- brand kit: real colours, fonts and product photos from the brand's own site ----
+import { buildKit, pickProduct, overlayColor, lum, shopifyProducts } from '../lib/brandkit.js';
+process.env.FIRECRAWL_API_KEY = 'fc-test';
+const route = async (url) => {
+  if (/firecrawl/.test(url)) return { ok: true, status: 200, json: async () => ({ data: { branding: { colors: { primary: '#df2a27', secondary: '#fff7ec', background: '#F9C3D2', textPrimary: '#4A2320' }, fonts: [{ family: 'Bagel Fat One', role: 'heading' }, { family: 'Figtree', role: 'body' }], typography: { fontFamilies: { primary: 'Figtree', heading: 'Bagel Fat One' } }, images: { logo: 'https://cdn.example/logo.png' }, personality: { tone: 'playful', energy: 'high' } } } }) };
+  if (/products\.json/.test(url)) return { ok: true, status: 200, json: async () => ({ products: [{ title: 'Red Velvet', handle: 'red-velvet', variants: [{ price: '250.00' }], images: [{ src: 'https://cdn/rv1.jpg' }, { src: 'https://cdn/rv2.jpg' }], body_html: '<p>Soft</p>' }, { title: 'Choco Chip', handle: 'choco-chip', images: [{ src: 'https://cdn/cc.jpg' }] }, { title: 'No photo', handle: 'x', images: [] }] }) };
+  return { ok: false, status: 404, text: async () => '' };
+};
+const kitb = await buildKit({ input: { brand: { url: 'https://munchnco.myshopify.com/' } }, brand: {} }, { fetchImpl: route });
+assert.deepEqual(kitb.fonts, { heading: 'Bagel Fat One', body: 'Figtree' });
+assert.equal(kitb.colors.primary, '#DF2A27', 'hex is normalised');
+assert.equal(kitb.logo, 'https://cdn.example/logo.png');
+assert.deepEqual(kitb.products.map(x => x.title), ['Red Velvet', 'Choco Chip'], 'products with no photo are dropped');
+assert.equal(kitb.products[0].price, '250.00'); assert.equal(kitb.products[0].images.length, 2);
+assert.equal(pickProduct(kitb.products, { primary_text: 'Our choco chip box is moving fast' }, 0).title, 'Choco Chip', 'the ad names its product');
+assert.equal(pickProduct(kitb.products, { primary_text: 'gift boxes' }, 1).title, 'Choco Chip', 'otherwise rotate so the three ads differ');
+assert.equal(pickProduct([], {}, 0), null);
+assert.equal(overlayColor(kitb), '#4A2320', 'dark text on the brand\'s light pink');
+assert.equal(overlayColor({ colors: { background: '#000000', text: '#FFFFFF' } }), '#FFFFFF', 'light text on a dark brand');
+assert.ok(lum('#000000') < 0.01 && lum('#FFFFFF') > 0.99);
+assert.deepEqual(await shopifyProducts('not a url'), []);
+
 console.log('images ok');
 process.exit(0);
