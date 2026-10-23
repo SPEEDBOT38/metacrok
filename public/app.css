@@ -205,3 +205,9 @@ mark.ph{background:var(--mint);color:var(--night);border-radius:3px;padding:0 3p
 .erow .in{height:42px;font-size:15px}
 .foot{padding:48px var(--gut) 120px;color:var(--mute);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+/* ad image panel */
+.imgp{background:var(--navy);border:2px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.imgp img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;display:block;background:var(--night)}
+.imgp a{color:var(--sky)}
+a.btn{text-decoration:none}

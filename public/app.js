@@ -42,7 +42,7 @@
 
   /* ---------------- state ---------------- */
   const F = { url: '', name: '', ig: '', rivals: [], rivalInput: '', showSuggest: false, sug: null, niche: '', goal: 'cold traffic', notes: '', market: 'IN', demo: false, error: '', busy: false };
-  const S = { screen: 'feed', id: null, run: null, ads: [], igPosts: [], angles: [], pending: 0, tab: 'you', sel: 0, mapSel: null, layers: { rival: true, post: true, new: true }, filter: 'All', since: 0, logs: [], done: false, tweak: '', lastPayload: null, clockT: null, versions: {} };
+  const S = { screen: 'feed', id: null, run: null, ads: [], igPosts: [], angles: [], pending: 0, tab: 'you', sel: 0, mapSel: null, layers: { rival: true, post: true, new: true }, filter: 'All', since: 0, logs: [], done: false, tweak: '', lastPayload: null, clockT: null, versions: {}, img: {} };
 
   /* ---------------- header ---------------- */
   function renderSteps() {
@@ -425,6 +425,31 @@
   }
 
   /* ---- Ads ---- */
+  /* ---- ad image: Pexels for inspiration, Nano Banana paints it ---- */
+  function imagePanel(v) {
+    const im = (S.run.images || []).find(i => i.idx === v.idx), st = S.img[v.idx] || {}, busy = st.state === 'busy';
+    const credit = im && (im.photos || []).length ? '<p style="font-size:12px;color:var(--mute)">Inspired by photos from <a href="' + (im.photos[0].source === 'Pexels' ? 'https://www.pexels.com' : 'https://pixabay.com') + '" target="_blank" rel="noopener">' + esc(im.photos[0].source || 'Pixabay') + '</a>: ' + im.photos.map(p => '<a href="' + esc(p.page) + '" target="_blank" rel="noopener">' + esc(p.photographer) + '</a>').join(', ') + '.</p>' : '';
+    return '<div class="imgp"><p class="px s">AD IMAGE</p>' +
+      (im ? '<img src="' + esc(im.url) + '" alt="Painted image for ad ' + (v.idx + 1) + '">' +
+        (im.variant_version !== (v.version || 1) ? '<p style="font-size:13px;color:var(--yellow)">Painted for an earlier version of this ad. Make a new one to match the rewrite.</p>' : '') +
+        '<p style="font-size:12px;color:var(--mute)">' + (im.text_on_image ? 'Text on the image: “' + esc(im.text_on_image) + '”. ' : 'No words on the image: add your headline in Ads Manager. ') + (im.brand_refs ? 'Matched to ' + im.brand_refs + ' of your own posts. ' : '') + (im.pexels_note ? esc(im.pexels_note) + '. ' : '') + 'Painted by Nano Banana · ' + usd(im.usd) + '</p>' + credit
+        : '<p style="font-size:14px;color:var(--soft)">Paint this ad in your brand’s look, using inspiration photos and your own posts. Takes about 20 seconds.</p>') +
+      (st.error ? '<p class="err" style="font-size:14px">' + esc(st.error) + '</p>' : '') +
+      '<div class="row"><button class="btn sm" style="height:40px"' + (busy ? ' disabled' : '') + ' data-act="img-make" data-i="' + v.idx + '">' + (busy ? 'Painting…' : im ? 'Make a new one' : 'Make the image') + '</button>' +
+      (im ? '<a class="btn mid sm" style="height:40px;text-decoration:none" href="' + esc(im.url) + '" download="metacrok-ad-' + (v.idx + 1) + '.png">Download</a>' : '') + '</div></div>';
+  }
+  async function makeImage(idx) {
+    S.img[idx] = { state: 'busy' }; rerender();
+    try {
+      const r = await api('/images/create', { body: { run_id: S.id, idx } });
+      S.run.images = [...(S.run.images || []).filter(i => i.idx !== idx), r].sort((a, b) => a.idx - b.idx);
+      S.img[idx] = {};
+      toast('Ad ' + (idx + 1) + ' painted · ' + usd(r.cost_usd));
+    } catch (e) { S.img[idx] = { error: e.message }; }
+    if (S.screen === 'results') rerender();
+  }
+
+  const imgOf = (idx) => (S.run.images || []).find(i => i.idx === idx);
   function tabAds() {
     const r = S.run, vars = r.variants || [], v = vars[S.sel];
     if (!v) return '<section class="pane"><div class="pane-h"><h2>your ads.</h2><p>No ads were written for this run.</p></div></section>';
@@ -434,13 +459,14 @@
     const fields = [['Primary text', v.primary_text, 300], ['Headline', v.headline, 40], ['Description', v.description, 30], ['Button', v.cta, 0]];
     const w = nr ? distWord(nr.d) : null;
     return '<section class="pane"><div class="pane-h"><h2>three ads for the open space.</h2><p><mark class="ph">[Brackets]</mark> are yours to fill. We never invent ratings, offers or stories. Review, then paste into Ads Manager.</p></div>' +
+      '<div class="row" style="align-items:center"><button class="btn" data-act="img-all"' + ([0, 1, 2].some(i => (S.img[i] || {}).state === 'busy') ? ' disabled' : '') + '>Make images for all ' + vars.length + '</button><span style="font-size:13px;color:var(--mute)">Each image is painted by Nano Banana from stock-photo inspiration and your own posts, about 3 cents per ad.</span></div>' +
       '<div class="grid-auto">' + vars.map((x, i) => '<button class="vbtn' + (i === S.sel ? ' on' : '') + '" data-act="sel-var" data-i="' + i + '"><div class="vhead"><span class="px y">AD ' + (x.idx + 1) + ' · V' + (x.version || 1) + '</span><span style="font:600 13px \'Funnel Sans\',sans-serif;color:var(--soft)">' + esc(x.angle) + '</span></div>' +
-        '<div class="fb"><div class="who"><i></i><div><b>' + esc(handle) + '</b><small>Sponsored</small></div></div><p class="pt">' + esc(String(x.primary_text || '').replace(/\[([^\]]+)\]/g, '[$1]')) + '</p><div class="art" style="background:' + ART[(x.idx + (x.angle || '').length) % ART.length] + '">' + esc(x.overlay_text || x.headline) + '</div>' +
+        '<div class="fb"><div class="who"><i></i><div><b>' + esc(handle) + '</b><small>Sponsored</small></div></div><p class="pt">' + esc(String(x.primary_text || '').replace(/\[([^\]]+)\]/g, '[$1]')) + '</p>' + (imgOf(x.idx) ? '<div class="art" style="background:url(' + esc(imgOf(x.idx).url) + ') center/cover"></div>' : '<div class="art" style="background:' + ART[(x.idx + (x.angle || '').length) % ART.length] + '">' + esc(x.overlay_text || x.headline) + '</div>') + '' +
         '<div class="bar"><div style="min-width:0"><b>' + esc(x.headline) + '</b><span class="d">' + esc(x.description) + '</span></div><span class="cta">' + esc(x.cta) + '</span></div></div></button>').join('') + '</div>' +
       '<div class="detail"><div class="col-g"><div class="row" style="align-items:center;gap:12px"><span class="px y">AD ' + (v.idx + 1) + '</span><h3 class="disp" style="font-size:30px;line-height:1;font-weight:800">' + esc(v.angle) + '</h3>' + (v.audience ? '<span style="font:600 12px \'Funnel Sans\',sans-serif;padding:4px 10px;border-radius:4px;background:var(--paper);color:var(--night)">for ' + esc(v.audience) + '</span>' : '') + '</div>' +
         fields.map(([l, t, max], i) => '<div class="field"><div class="fh"><span>' + l + (max ? ' <span class="px8" style="color:' + (String(t || '').length > max ? 'var(--red)' : 'var(--dim)') + ';margin-left:6px">' + String(t || '').length + '/' + max + '</span>' : '') + '</span><button class="btn mid sm" data-act="copy-field" data-i="' + i + '" style="height:32px">Copy</button></div><p>' + ph(t) + '</p></div>').join('') +
         '<button class="btn sm" style="align-self:flex-start;height:40px" data-act="copy-all">Copy the whole ad</button></div>' +
-      '<div class="col-g" style="gap:18px">' +
+      '<div class="col-g" style="gap:18px">' + imagePanel(v) +
         (v.why_this_angle ? '<div><p class="lab">WHY THIS ANGLE</p><p style="color:var(--soft)">' + esc(v.why_this_angle) + '</p></div>' : '') +
         '<div><p class="lab">CREATIVE DIRECTION</p><p style="color:var(--soft)">' + esc(v.creative_direction) + '</p></div>' +
         (insp.competitor ? '<div class="dash">Structure borrowed from <b style="color:var(--paper)">' + esc(insp.competitor) + (src ? ', an ad running ' + (src.days_running || 0) + ' days' : '') + '</b>. Words are ours.' + (insp.what_we_borrowed ? ' ' + esc(insp.what_we_borrowed) : '') + '</div>' : '') +
@@ -522,6 +548,8 @@
       case 'preset': S.tweak = d.v; return rerender();
       case 'copy-field': { const v = S.run.variants[S.sel], f = [v.primary_text, v.headline, v.description, v.cta][Number(d.i)]; return copy(f, 'Copied'); }
       case 'copy-all': { const v = S.run.variants[S.sel]; return copy([v.primary_text, '', 'Headline: ' + v.headline, 'Description: ' + v.description, 'CTA: ' + v.cta, '', 'Creative: ' + v.creative_direction, 'Text on image: ' + (v.overlay_text || ''), 'Angle: ' + v.angle].join('\n'), 'Copied. Paste it into Ads Manager.'); }
+      case 'img-make': return makeImage(Number(d.i));
+      case 'img-all': return void (await Promise.all((S.run.variants || []).map(v => makeImage(v.idx))));
       case 'rewrite': {
         const inp = $('#tweak-in'), text = ((inp && inp.value) || S.tweak).trim(); if (!text) return toast('Say how to change it first');
         el.disabled = true; el.textContent = 'Rewriting…';
