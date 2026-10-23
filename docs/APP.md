@@ -13,7 +13,7 @@ Across the top, **1 Feed → 2 Chew → 3 Fresh out** shows where you are.
 Fill in the form and tap **feed him →**.
 
 - **Your brand:** your website and brand name. Add your Instagram handle too, so Metacrok can compare your posts with your rivals' ads. Without a website or brand name, the run won't start.
-- **Your rivals:** add up to three by brand name, `@handle`, or Facebook page link. A link is the most exact match. Not sure who they are? Tap **Not sure? Find my rivals** and pick from the suggestions.
+- **Your rivals:** add up to three by brand name, `@handle`, or Facebook page link. A Facebook page link, or the link from Meta's Ad Library for that advertiser, is the most exact match. If a rival shows as having no ads, check the market: it may advertise in another country (try "All markets"). Not sure who they are? Tap **Not sure? Find my rivals** and pick from the suggestions.
 - **The ads are for:** cold traffic, retargeting, a launch or a sale.
 - **What makes your product different:** optional. This is the only source of claims the ads can make, so add ratings, offers or ingredients here if you want them used.
 - **Ad Library market:** the country whose Meta ads to read.

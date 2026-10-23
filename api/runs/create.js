@@ -25,12 +25,15 @@ function parseCompetitor(raw) {
   let name = s;
   const fb = s.match(/facebook\.com\/(?:profile\.php\?id=)?([^/?#&]+)/i);
   const ig = s.match(/instagram\.com\/([^/?#]+)/i);
-  if (fb) name = fb[1];
+  // an Ad Library link or a numeric page link names the page by its ID: exact, no guessing
+  const pid = (s.match(/view_all_page_id=(\d{5,})/) || [])[1] || (fb && /^\d{5,}$/.test(fb[1]) ? fb[1] : null);
+  if (pid) name = hint.hint_name || 'Page ' + pid.slice(-6);
+  else if (fb) name = fb[1];
   else if (ig) name = ig[1];
   name = name.replace(/^@/, '').replace(/^https?:\/\/(www\.)?/, '').replace(/\.(com|in|co|store|shop)(\/.*)?$/i, '').trim();
   if (!name) return null;
-  const slug = fb && !/^(ads|pages|people|profile\.php)$/i.test(fb[1]) && !/^\d+$/.test(fb[1]) ? fb[1] : null; // a pasted page link is exact
-  return { name: name.slice(0, 60), input: ig ? name : s, ig: igHandle(s), ...(slug ? { fb: slug } : {}), ...hint }; // ig: also pull their organic posts
+  const slug = !pid && fb && !/^(ads|pages|people|profile\.php)$/i.test(fb[1]) ? fb[1] : null; // a pasted page link is exact
+  return { name: name.slice(0, 60), input: ig ? name : s, ig: igHandle(s), ...(pid ? { page_id: pid } : {}), ...(slug ? { fb: slug } : {}), ...hint }; // ig: also pull their organic posts
 }
 
 export default async function (req, res) {
