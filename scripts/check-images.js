@@ -1,6 +1,6 @@
 // scripts/check-images.js — ad image generation with stubbed Pexels and OpenRouter (no network, no cost).
 import assert from 'node:assert/strict';
-import { adPrompt, printableOverlay, paintAd, pexelsSearch, pixabaySearch, stockSearch, stockName, ImageSetupError, DEFAULT_IMAGE_MODELS } from '../lib/images.js';
+import { adPrompt, printableOverlay, toDataUrl, paintAd, pexelsSearch, pixabaySearch, stockSearch, stockName, ImageSetupError, DEFAULT_IMAGE_MODELS } from '../lib/images.js';
 
 process.env.OPENROUTER_API_KEY = 'test-key';
 const run = { input: { brand: { name: 'Acme' } }, brand: { name: 'Acme', sells: 'hand-block printed cotton sarees', tone_of_voice: 'calm, understated', voice_traits: ['elegant'], colour: '#8a2b3d', price_band: 'mid' } };
@@ -9,6 +9,8 @@ const v = { angle: 'education', audience: 'saree lovers', creative_direction: 'F
 // text on the image: never a bracketed placeholder
 assert.equal(printableOverlay(v), 'Cotton that breathes');
 assert.equal(printableOverlay({ overlay_text: '[founder story]' }), '');
+assert.equal(printableOverlay({ overlay_text: 'Grooming science explained simply ' + String.fromCodePoint(0x1F62E, 0x200D, 0x1F4A8) }), 'Grooming science explained simply', 'emoji are not painted');
+assert.equal(printableOverlay({ overlay_text: String.fromCodePoint(0x1F525, 0x1F525) }), '');
 assert.equal(printableOverlay({ overlay_text: 'x'.repeat(80) }), '');
 const p = adPrompt(run, v, { brandRefs: 2, inspoRefs: 3 });
 assert.match(p, /Cotton that breathes/);
@@ -37,6 +39,7 @@ const ok = await paintAd({
 });
 assert.equal(calls.length, 2, 'an empty first reply moves to the next model');
 assert.notEqual(calls[0].model, calls[1].model);
+assert.equal(ok.tried.length, 1, 'the model that gave no image is recorded');
 assert.deepEqual(calls[0].provider, { only: ['google-vertex', 'google-ai-studio'], allow_fallbacks: false }, 'pinned to Google infrastructure');
 assert.deepEqual(calls[0].modalities, ['image', 'text']);
 assert.equal(calls[0].messages[0].content[1].type, 'image_url', 'reference images are sent');
@@ -49,7 +52,15 @@ assert.equal(byok.usd, 0.0123);
 // no credits: stop, say so
 await assert.rejects(paintAd({ prompt: 'x', fetchImpl: stub([{ status: 402, json: { error: { message: 'no credits' } } }]) }), (e) => e instanceof ImageSetupError && /credits/.test(e.message));
 // every model fails: an error that says what happened
-await assert.rejects(paintAd({ prompt: 'x', fetchImpl: stub([1, 2, 3].map(() => ({ status: 200, json: { choices: [{ message: { content: 'no' } }] } }))) }), /gave no image/);
+await assert.rejects(paintAd({ prompt: 'x', fetchImpl: stub([1, 2, 3, 4].map(() => ({ status: 200, json: { choices: [{ message: { content: "no" } }] } }))) }), /gave no image/);
+
+// stock downloads: a 429 is retried, then given up on quietly (the ad is still painted)
+let hits = 0;
+const flaky = async () => (++hits < 3 ? { status: 429, ok: false } : { status: 200, ok: true, headers: { get: () => 'image/jpeg' }, arrayBuffer: async () => new Uint8Array(900).buffer });
+const got = await toDataUrl('https://x/y.jpg', { fetchImpl: flaky, sleepMs: async () => {} });
+assert.ok(got && got.startsWith('data:image/jpeg;base64,') && hits === 3, 'two 429s, then success');
+hits = -9;
+assert.equal(await toDataUrl('https://x/y.jpg', { fetchImpl: async () => ({ status: 429, ok: false }), sleepMs: async () => {} }), null, 'still throttled: give up, no throw');
 
 // Pexels: needs a key, maps the fields we credit
 delete process.env.PEXELS_API_KEY;

@@ -42,6 +42,12 @@ Body `{ run_id, ad_id, action, angle?, note? }`. `action`: `exclude` (at least 3
 ### `POST /api/runs/icp`
 Body `{ id, audiences: [{ name, who?, need? }] | null, target? }`. 1 to 6 audiences; `null` returns to the inferred ones; `target` must be one of them. Run must be `done`.
 
+### `POST /api/images/create`
+Body `{ run_id, idx (0 to 2) }`. Paints one of the three ads (about 15 seconds, about $0.035). Returns `{ url, model, usd, queries, brand_refs, photos: [{ page, photographer, photographer_url, source }], text_on_image, pexels_note }`. Needs `OPENROUTER_API_KEY`; inspiration photos need `PIXABAY_API_KEY` (or `PEXELS_API_KEY`), otherwise it paints from the brand alone. Limited to 15 images per hour per visitor (`IMAGES_PER_HOUR`).
+
+### `GET /api/images/get?run_id=ID&idx=N`
+The painted image. `GET /api/runs/get` lists existing images in `images`.
+
 ### `POST /api/runs/regenerate`
 Body `{ id }`. Re-runs synthesis and writing on the kept ads, replacing the three ads. Needs pending changes. Then drive with `advance`.
 
@@ -49,4 +55,4 @@ Body `{ id }`. Re-runs synthesis and writing on the kept ads, replacing the thre
 Landing-page signup and demo-seed admin. Not used by the MCP server.
 
 ## Rate limits (per visitor, per hour)
-Runs 12 (`RUNS_PER_HOUR`), controls 200, audience edits 120, regenerate 12, tweaks 40. A 429 means wait.
+Runs 12 (`RUNS_PER_HOUR`), controls 200, audience edits 120, regenerate 12, tweaks 40, images 15 (`IMAGES_PER_HOUR`). A 429 means wait.

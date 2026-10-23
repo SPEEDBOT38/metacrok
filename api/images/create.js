@@ -35,9 +35,12 @@ export default async function (req, res) {
     } else pexelsNote = 'no stock-photo key set, painted from the brand alone';
     let brandPosts = [];
     try { brandPosts = (await loadIgPosts(runId)).filter(p => p.is_brand && p.image_url).slice(0, 2); } catch (_) {}
-    const [brandUrls, inspoUrls] = await Promise.all([
-      Promise.all(brandPosts.map(p => toDataUrl(p.image_url))), Promise.all(photos.map(p => toDataUrl(p.src))),
-    ]);
+    // the brand's posts and the stock photos come from different hosts; the stock photos go one at a time (they throttle bursts)
+    const brandUrlsP = Promise.all(brandPosts.map(p => toDataUrl(p.image_url)));
+    const inspoUrls = [];
+    for (const p of photos) inspoUrls.push(await toDataUrl(p.src));
+    const brandUrls = await brandUrlsP;
+    if (photos.length && !inspoUrls.some(Boolean)) pexelsNote = stockName() + ' photos could not be downloaded, painted from the brand alone';
     const brandRefs = brandUrls.filter(Boolean), inspoRefs = inspoUrls.filter(Boolean);
     const usedPhotos = photos.filter((p, i) => inspoUrls[i]);
 
@@ -45,7 +48,7 @@ export default async function (req, res) {
     const prompt = adPrompt(run, v, { brandRefs: brandRefs.length, inspoRefs: inspoRefs.length });
     const out = await paintAd({ prompt, refs: [...brandRefs, ...inspoRefs], deadline });
     const meta = {
-      model: out.model, usd: out.usd + q.usd, queries: q.queries, pexels_note: pexelsNote, brand_refs: brandRefs.length,
+      model: out.model, tried: out.tried, usd: out.usd + q.usd, queries: q.queries, pexels_note: pexelsNote, brand_refs: brandRefs.length,
       text_on_image: printableOverlay(v) || null,
       photos: usedPhotos.map(p => ({ page: p.page, photographer: p.photographer, photographer_url: p.photographer_url, source: p.source })),
     };

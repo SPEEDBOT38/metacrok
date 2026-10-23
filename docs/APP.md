@@ -53,6 +53,7 @@ Changes wait in a bar at the bottom until you tap **Regenerate**. Regenerating r
 - **Edit audiences** (You or Rivals): replace the guessed audiences with your own and choose the one to aim at.
 - **Tweak** (Your ads): rewrite one ad, e.g. "shorter" or "more playful". Earlier versions are kept.
 - **Copy:** copies one field or the whole ad, ready for Ads Manager.
+- **Make the image** (Your ads): paints the ad as a square image. It uses stock photos from Pixabay for mood, your own Instagram posts for the brand's look, and Google's Nano Banana to paint. About 3 to 4 cents and 15 seconds per image. Text appears on the image only when the ad's on-image line has no [placeholder]. Photographer credits are shown. Regenerating the ads clears the old images.
 
 ## Limits
 
